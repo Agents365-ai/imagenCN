@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Imagen-Qwen - Alibaba Cloud Bailian Text-to-Image Script
+ImagenCN - Alibaba Cloud Bailian Text-to-Image Script
 
 Generate images using Alibaba Cloud DashScope API with Qwen-Image and Wan Series models.
 Default endpoint is China region.

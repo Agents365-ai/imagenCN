@@ -1,4 +1,4 @@
-# Imagen-Qwen — 阿里云百炼 AI 图像生成技能
+# ImagenCN — 阿里云百炼 AI 图像生成技能
 
 [English](README.md)
 
@@ -36,20 +36,20 @@
 
 **Claude Code（全局）：**
 ```bash
-git clone https://github.com/Agents365-ai/imagen-qwen.git ~/.claude/skills/imagen-qwen
+git clone https://github.com/Agents365-ai/imagenCN.git ~/.claude/skills/imagenCN
 ```
 
 **Claude Code（仅当前项目）：**
 ```bash
-git clone https://github.com/Agents365-ai/imagen-qwen.git .claude/skills/imagen-qwen
+git clone https://github.com/Agents365-ai/imagenCN.git .claude/skills/imagenCN
 ```
 
 **OpenClaw：**
 ```bash
-git clone https://github.com/Agents365-ai/imagen-qwen.git skills/imagen-qwen
+git clone https://github.com/Agents365-ai/imagenCN.git skills/imagenCN
 ```
 
-**SkillsMP：** 在 [skillsmp.com](https://skillsmp.com) 搜索 `imagen-qwen`，一键安装。
+**SkillsMP：** 在 [skillsmp.com](https://skillsmp.com) 搜索 `imagenCN`，一键安装。
 
 ## 系统要求
 
@@ -99,22 +99,22 @@ export DASHSCOPE_API_BASE="cn"  # 或 "sg", "us", 或完整 URL
 
 ```bash
 # 基本用法（默认模型: qwen-image-2.0-pro，原生 2K）
-python ~/.claude/skills/imagen-qwen/scripts/generate_image.py "一只可爱的猫咪" output.png
+python ~/.claude/skills/imagenCN/scripts/generate_image.py "一只可爱的猫咪" output.png
 
 # 使用 Wan2.7 模型生成 4K 写实图像
-python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --model wan2.7-image-pro --size 4K "山间日落" photo.png
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --model wan2.7-image-pro --size 4K "山间日落" photo.png
 
 # 自定义尺寸
-python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --size 16:9 "宽屏风景" landscape.png
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --size 16:9 "宽屏风景" landscape.png
 
 # 编辑已有图片（需 --image）
-python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --model qwen-image-edit-max --image input.png "把背景换成海滩日落" edited.png
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --model qwen-image-edit-max --image input.png "把背景换成海滩日落" edited.png
 
 # 使用负面提示词
-python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --negative "模糊" "高质量人像" portrait.png
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --negative "模糊" "高质量人像" portrait.png
 
 # 列出可用模型
-python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --list-models
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --list-models
 ```
 
 ## 模型

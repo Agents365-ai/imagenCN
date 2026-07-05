@@ -1,4 +1,4 @@
-# Imagen-Qwen — AI Image Generation with Chinese Text Excellence
+# ImagenCN — AI Image Generation with Chinese Text Excellence
 
 [中文文档](README_CN.md)
 
@@ -36,20 +36,20 @@ A Claude Code / OpenClaw skill for AI image generation using Alibaba Cloud Baili
 
 **Claude Code (global):**
 ```bash
-git clone https://github.com/Agents365-ai/imagen-qwen.git ~/.claude/skills/imagen-qwen
+git clone https://github.com/Agents365-ai/imagenCN.git ~/.claude/skills/imagenCN
 ```
 
 **Claude Code (project-specific):**
 ```bash
-git clone https://github.com/Agents365-ai/imagen-qwen.git .claude/skills/imagen-qwen
+git clone https://github.com/Agents365-ai/imagenCN.git .claude/skills/imagenCN
 ```
 
 **OpenClaw:**
 ```bash
-git clone https://github.com/Agents365-ai/imagen-qwen.git skills/imagen-qwen
+git clone https://github.com/Agents365-ai/imagenCN.git skills/imagenCN
 ```
 
-**SkillsMP:** Search `imagen-qwen` on [skillsmp.com](https://skillsmp.com) for one-click install.
+**SkillsMP:** Search `imagenCN` on [skillsmp.com](https://skillsmp.com) for one-click install.
 
 ## Requirements
 
@@ -99,22 +99,22 @@ Generate a 16:9 landscape wallpaper
 
 ```bash
 # Basic usage (default model: qwen-image-2.0-pro, native 2K)
-python ~/.claude/skills/imagen-qwen/scripts/generate_image.py "A cute cat" output.png
+python ~/.claude/skills/imagenCN/scripts/generate_image.py "A cute cat" output.png
 
 # Photorealistic 4K with Wan2.7
-python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --model wan2.7-image-pro --size 4K "Mountain sunset" photo.png
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --model wan2.7-image-pro --size 4K "Mountain sunset" photo.png
 
 # Custom size
-python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --size 16:9 "Wide landscape" landscape.png
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --size 16:9 "Wide landscape" landscape.png
 
 # Edit an existing image (requires --image)
-python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --model qwen-image-edit-max --image input.png "Change the background to a beach" edited.png
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --model qwen-image-edit-max --image input.png "Change the background to a beach" edited.png
 
 # With negative prompt
-python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --negative "blurry" "High quality portrait" portrait.png
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --negative "blurry" "High quality portrait" portrait.png
 
 # List available models
-python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --list-models
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --list-models
 ```
 
 ## Models
