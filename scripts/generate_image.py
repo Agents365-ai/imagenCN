@@ -23,8 +23,12 @@ API Endpoints:
 Models:
     Qwen-Image 2.0 family (latest, native 2K) - uses MultiModalConversation:
         - qwen-image-2.0-pro (default, flagship)
+        - qwen-image-2.0-pro-2026-06-22 (latest snapshot, generation + editing fusion)
         - qwen-image-2.0
         - qwen-image-max
+
+    Z-Image (lightweight, fast & low-cost) - uses MultiModalConversation:
+        - z-image-turbo
 
     Qwen-Image legacy (text rendering) - uses ImageSynthesis:
         - qwen-image-plus
@@ -81,8 +85,12 @@ GENERATION_MODELS = {
 
 # Models using MultiModalConversation (Qwen-Image 2.0 family, native 2K)
 MULTIMODAL_MODELS = {
-    "qwen-image-2.0-pro", "qwen-image-2.0", "qwen-image-max",
+    "qwen-image-2.0-pro", "qwen-image-2.0-pro-2026-06-22",
+    "qwen-image-2.0", "qwen-image-max",
 }
+
+# Z-Image models (lightweight, fast) - also use MultiModalConversation
+ZIMAGE_MODELS = {"z-image-turbo"}
 
 # Size presets for Qwen-Image 2.0 family (native up to 2048x2048)
 QWEN2_SIZES = {
@@ -102,6 +110,16 @@ QWEN_SIZES = {
     "9:16": "928*1664",
     "4:3": "1472*1104",
     "3:4": "1104*1472",
+}
+
+# Size presets for Z-Image (pixel area must stay within 512x512 to 2048x2048)
+ZIMAGE_SIZES = {
+    "1:1": "1024*1024",
+    "16:9": "1280*720",
+    "9:16": "720*1280",
+    "2:3": "1024*1536",
+    "3:2": "1536*1024",
+    "1K": "1024*1024",
 }
 
 # Size presets for Wan series. Wan2.7 also accepts shorthand "1K"/"2K"/"4K".
@@ -143,6 +161,9 @@ def resolve_size(size_input, model):
     if model in MULTIMODAL_MODELS:
         sizes = QWEN2_SIZES
         default = "2048*2048"
+    elif model in ZIMAGE_MODELS:
+        sizes = ZIMAGE_SIZES
+        default = "1024*1024"
     elif model in SYNTHESIS_MODELS:
         sizes = QWEN_SIZES
         default = "1328*1328"
@@ -256,6 +277,10 @@ def list_models():
     for m in sorted(MULTIMODAL_MODELS):
         default = " (default)" if m == DEFAULT_MODEL else ""
         print(f"  - {m}{default}")
+    print("\nZ-Image (lightweight, fast & low-cost) [MultiModalConversation API]:")
+    for m in sorted(ZIMAGE_MODELS):
+        default = " (default)" if m == DEFAULT_MODEL else ""
+        print(f"  - {m}{default}")
     print("\nQwen-Image legacy (text rendering) [ImageSynthesis API]:")
     for m in sorted(SYNTHESIS_MODELS):
         default = " (default)" if m == DEFAULT_MODEL else ""
@@ -266,6 +291,7 @@ def list_models():
         print(f"  - {m}{default}")
     print("\nSize presets:")
     print("  Qwen-Image 2.0:", ", ".join(QWEN2_SIZES.keys()))
+    print("  Z-Image:", ", ".join(ZIMAGE_SIZES.keys()))
     print("  Qwen-Image legacy:", ", ".join(QWEN_SIZES.keys()))
     print("  Wan Series:", ", ".join(WAN_SIZES.keys()))
     print("\nAPI endpoints:")
@@ -308,7 +334,7 @@ Examples:
     size = resolve_size(args.size, model)
     output_path = Path(args.output)
 
-    all_models = SYNTHESIS_MODELS | GENERATION_MODELS | MULTIMODAL_MODELS
+    all_models = SYNTHESIS_MODELS | GENERATION_MODELS | MULTIMODAL_MODELS | ZIMAGE_MODELS
     if model not in all_models:
         print(f"Warning: Unknown model '{model}'. Using {DEFAULT_MODEL}", file=sys.stderr)
         model = DEFAULT_MODEL
@@ -319,7 +345,7 @@ Examples:
 
     if model in SYNTHESIS_MODELS:
         api_type = "ImageSynthesis"
-    elif model in MULTIMODAL_MODELS:
+    elif model in MULTIMODAL_MODELS or model in ZIMAGE_MODELS:
         api_type = "MultiModalConversation"
     else:
         api_type = "ImageGeneration"
@@ -334,7 +360,7 @@ Examples:
     try:
         if model in SYNTHESIS_MODELS:
             rsp = generate_with_synthesis(api_key, model, args.prompt, size, args.negative)
-        elif model in MULTIMODAL_MODELS:
+        elif model in MULTIMODAL_MODELS or model in ZIMAGE_MODELS:
             rsp = generate_with_multimodal(api_key, model, args.prompt, size, args.negative)
         else:
             rsp = generate_with_generation(api_key, model, args.prompt, size, args.negative)

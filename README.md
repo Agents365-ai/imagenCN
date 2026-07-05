@@ -10,7 +10,7 @@ A Claude Code / OpenClaw skill for AI image generation using Alibaba Cloud Baili
 |---------|-----------|-------------------|-------------------|
 | **Chinese text rendering** | ✓ Qwen-Image optimized | ✗ No image generation | Partial |
 | **Photorealistic images** | ✓ Wan series multi-model | ✗ No image generation | Partial |
-| **Multi-model selection** | ✓ 14 models to choose from | ✗ N/A | Usually single model |
+| **Multi-model selection** | ✓ 15+ models to choose from | ✗ N/A | Usually single model |
 | **Size presets** | ✓ 7+ aspect ratios | ✗ N/A | Partial |
 | **Negative prompts** | ✓ Fine-grained control | ✗ N/A | Partial |
 | **CLI direct invocation** | ✓ Script ready to use | ✗ N/A | Requires custom code |
@@ -26,6 +26,7 @@ A Claude Code / OpenClaw skill for AI image generation using Alibaba Cloud Baili
 - **Qwen-Image 2.0**: Latest flagship, native 2K, professional typography rendering
 - **Qwen-Image legacy**: Lighter Chinese/English text rendering models
 - **Wan Series**: Photorealistic images and photography-grade visuals, Wan2.7 supports 4K
+- **Z-Image**: Lightweight, fast and low-cost; high-fidelity portraits and product shots
 - **Multiple size presets**: 1:1, 16:9, 9:16, 4:3, 3:4, plus 1K/2K/4K
 - **Cross-platform**: Windows, macOS, Linux support
 - **Multiple API regions**: China (default), Singapore, Virginia
@@ -117,6 +118,7 @@ python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --list-models
 | Model | Best For |
 |-------|----------|
 | `qwen-image-2.0-pro` | **Default**, latest flagship, native 2K, strongest typography and detail |
+| `qwen-image-2.0-pro-2026-06-22` | Latest snapshot (Jun 2026), generation + editing fusion |
 | `qwen-image-2.0` | Standard 2.0 tier, native 2K |
 | `qwen-image-max` | Previous-gen flagship |
 | `qwen-image-plus` | Distilled accelerated version |
@@ -130,6 +132,7 @@ python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --list-models
 | `wanx2.1-t2i-turbo` | Fast execution |
 | `wanx2.1-t2i-plus` | Professional tier |
 | `wanx2.0-t2i-turbo` | Earlier generation |
+| `z-image-turbo` | Lightweight, fast & low-cost; portraits and product images |
 
 ## Size Presets
 
@@ -148,6 +151,13 @@ python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --list-models
 - `9:16` → 928×1664
 - `4:3` → 1472×1104
 - `3:4` → 1104×1472
+
+**Z-Image (pixel area 512×512 to 2048×2048):**
+- `1:1` → 1024×1024 (default)
+- `16:9` → 1280×720
+- `9:16` → 720×1280
+- `2:3` → 1024×1536
+- `3:2` → 1536×1024
 
 **Wan Series (Wan2.7 also accepts `1K`/`2K`/`4K`):**
 - `1:1` → 1024×1024

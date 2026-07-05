@@ -3,7 +3,7 @@ name: imagen-qwen
 description: Use when generating images with Alibaba Cloud Bailian API, especially for Chinese text rendering or photorealistic images
 author: Agents365-ai
 created: 2024-12-01
-updated: 2026-05-03
+updated: 2026-07-05
 homepage: https://github.com/Agents365-ai/imagen-qwen
 metadata: {"openclaw":{"requires":{"bins":["python3"],"env":["DASHSCOPE_API_KEY"]},"primaryEnv":"DASHSCOPE_API_KEY","emoji":"🎨"}}
 ---
@@ -14,10 +14,11 @@ metadata: {"openclaw":{"requires":{"bins":["python3"],"env":["DASHSCOPE_API_KEY"
 
 Generate images using Alibaba Cloud Bailian API. **Default endpoint is China region**.
 
-Supports three model families:
+Supports four model families:
 - **Qwen-Image 2.0** (latest, native 2K): Flagship general-purpose generator with strong text rendering
 - **Qwen-Image legacy**: Lighter Chinese/English text rendering models
 - **Wan Series**: Photorealistic images and photography-grade visuals (Wan2.7 supports up to 4K)
+- **Z-Image**: Lightweight, fast and low-cost; strong at high-fidelity portraits and product shots
 
 **Cross-platform support**: Windows, macOS, Linux
 
@@ -44,6 +45,7 @@ Automatically activate this skill when:
 | Model | Description |
 |-------|-------------|
 | `qwen-image-2.0-pro` | **Default**. Latest flagship, native 2K, strongest typography and detail |
+| `qwen-image-2.0-pro-2026-06-22` | Latest snapshot (Jun 2026): generation + editing fusion, better text rendering and prompt adherence |
 | `qwen-image-2.0` | Standard 2.0 tier, native 2K |
 | `qwen-image-max` | Previous-gen flagship (Dec 2025) |
 
@@ -67,6 +69,12 @@ Automatically activate this skill when:
 | `wanx2.1-t2i-turbo` | Fast execution |
 | `wanx2.1-t2i-plus` | Professional tier |
 | `wanx2.0-t2i-turbo` | Earlier generation |
+
+### Z-Image - Lightweight & Fast (MultiModalConversation API)
+
+| Model | Description |
+|-------|-------------|
+| `z-image-turbo` | Fast, low-cost generation; bilingual (CN/EN) text rendering, high-fidelity portraits and product images. Pixel area 512x512 to 2048x2048 |
 
 ## Usage
 
@@ -107,6 +115,14 @@ python ~/.claude/skills/imagen-qwen/scripts/generate_image.py --size 1280*720 "C
 - `9:16` -> 928x1664
 - `4:3` -> 1472x1104
 - `3:4` -> 1104x1472
+
+**Z-Image (pixel area 512x512 to 2048x2048):**
+- `1:1` -> 1024x1024 (default)
+- `16:9` -> 1280x720
+- `9:16` -> 720x1280
+- `2:3` -> 1024x1536
+- `3:2` -> 1536x1024
+- `1K` -> 1024x1024
 
 **Wan Series (Wan2.7 also accepts `1K`/`2K`/`4K`):**
 - `1:1` -> 1024x1024
@@ -175,7 +191,9 @@ export DASHSCOPE_API_BASE="https://dashscope-intl.aliyuncs.com/api/v1"
 | Photorealistic photos (4K) | `wan2.7-image-pro` |
 | Photorealistic photos (2K) | `wan2.7-image` |
 | Portrait photography | `wan2.7-image-pro` |
-| Fast generation | `wan2.2-t2i-flash` |
+| Fast, low-cost generation | `z-image-turbo` |
+| High-fidelity portraits / product shots (fast) | `z-image-turbo` |
+| Fast photorealistic (Wan) | `wan2.2-t2i-flash` |
 | Lower-cost text rendering | `qwen-image-plus` |
 
 ## Comparison with Imagen (Gemini)
@@ -186,7 +204,7 @@ export DASHSCOPE_API_BASE="https://dashscope-intl.aliyuncs.com/api/v1"
 | English text rendering | Excellent | Good |
 | Photorealistic images | Excellent | Good |
 | Speed | Medium | Fast |
-| Model variety | 14 models | 3 models |
+| Model variety | 15+ models | 3 models |
 | Max resolution | 4K (Wan2.7-Pro) | 2K |
 
 ## Examples
