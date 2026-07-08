@@ -267,7 +267,7 @@ python scripts/generate_image.py --list-models
 
 ## 许可证
 
-MIT License
+[CC BY-NC 4.0](LICENSE) — 非商业用途免费。商业使用需获得授权。
 
 ## 支持
 
