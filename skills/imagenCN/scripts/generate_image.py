@@ -14,7 +14,7 @@ Usage:
     python generate_image.py --model wan2.7-image-pro "prompt" output.png
     python generate_image.py --size 2K "prompt" output.png
     python generate_image.py --platform ark "prompt" output.png
-    python generate_image.py --model qwen-image-edit-max --image input.png "edit instruction" output.png
+    python generate_image.py --format json "prompt" output.png
 
 Environment variables:
     DASHSCOPE_API_KEY (required) - Alibaba Cloud Bailian API Key
@@ -25,36 +25,12 @@ Environment variables:
     ZHIPUAI_API_KEY (required for Zhipu) - Zhipu API Key
     STEP_API_KEY (required for StepFun) - StepFun API Key
 
-API Endpoints:
-    China (default): https://dashscope.aliyuncs.com/api/v1
-    Singapore: https://dashscope-intl.aliyuncs.com/api/v1
-    Virginia: https://dashscope-us.aliyuncs.com/api/v1
-
-Models:
-    Qwen-Image 2.0 family (latest, native 2K) - uses MultiModalConversation:
-        - qwen-image-2.0-pro (default, flagship)
-        - qwen-image-2.0-pro-2026-06-22 (latest snapshot, generation + editing fusion)
-        - qwen-image-2.0
-        - qwen-image-max, qwen-image-max-2025-12-30
-
-    Qwen-Image edit family (image editing, requires --image) - uses MultiModalConversation:
-        - qwen-image-edit-max, qwen-image-edit-max-2026-01-16
-        - qwen-image-edit-plus
-
-    Z-Image (lightweight, fast & low-cost) - uses MultiModalConversation:
-        - z-image-turbo
-
-    Qwen-Image legacy (text rendering) - uses ImageSynthesis:
-        - qwen-image-plus, qwen-image-plus-2026-01-09
-        - qwen-image
-
-    Wan Series (photorealistic) - uses ImageGeneration:
-        - wan2.7-image-pro (latest, supports up to 4K)
-        - wan2.7-image
-        - wan2.6-t2i
-        - wan2.5-t2i-preview
-        - wan2.2-t2i-flash, wan2.2-t2i-plus
-        - wanx2.1-t2i-turbo, wanx2.1-t2i-plus, wanx2.0-t2i-turbo
+Exit codes (stable, agent-parseable):
+    0 — success
+    1 — usage error (bad arguments, unknown model)
+    2 — auth / config error (missing or invalid API key)
+    3 — API error (upstream failure, rate limit, quota)
+    4 — I/O error (cannot write output file, download failed)
 """
 
 import argparse
@@ -89,9 +65,164 @@ except ImportError:
     err_console = None
     _HAS_RICH = False
 
+# ── Exit codes (stable, agent-parseable) ──────────────────────────────
+
+EX_USAGE = 1   # bad arguments, unknown model
+EX_AUTH  = 2   # missing or invalid API key, config error
+EX_API   = 3   # upstream API failure, rate limit, quota
+EX_IO    = 4   # file I/O error (write, download)
+
+EXIT_CODE_LABELS = {
+    0: "SUCCESS",
+    EX_USAGE: "USAGE_ERROR",
+    EX_AUTH: "AUTH_ERROR",
+    EX_API: "API_ERROR",
+    EX_IO: "IO_ERROR",
+}
+
+# ── Output format detection ───────────────────────────────────────────
+
+def _detect_format(explicit):
+    """Determine output format: 'json' or 'table'.
+
+    Priority: explicit --format flag > TTY detection.
+    When stdout is not a terminal, default to JSON (agent-friendly).
+    """
+    if explicit:
+        return explicit
+    return "json" if not sys.stdout.isatty() else "table"
+
+
+def _json_out(data):
+    """Emit a JSON document to stdout."""
+    print(json.dumps(data, ensure_ascii=False))
+    sys.stdout.flush()
+
+
+def _emit_error(code, message, retryable=False, **extra):
+    """Emit a structured error and exit.
+
+    In JSON mode: {"ok":false,"error":{"code":...,"message":...,"retryable":...}}
+    In table mode: human-readable error on stderr.
+    """
+    if _FMT == "json":
+        err_obj = {"code": EXIT_CODE_LABELS.get(code, "UNKNOWN"), "message": message,
+                    "retryable": retryable}
+        err_obj.update(extra)
+        _json_out({"ok": False, "error": err_obj})
+    else:
+        _err(f"Error: {message}")
+    sys.exit(code)
+
+
+def _emit_success(data, meta=None):
+    """Emit a success result.
+
+    In JSON mode: {"ok":true,"data":{...},"meta":{...}}
+    In table mode: human-readable summary on stdout.
+    """
+    m = meta or {}
+    if _FMT == "json":
+        _json_out({"ok": True, "data": data, "meta": m})
+    else:
+        for key, val in data.items():
+            label = key.replace("_", " ").capitalize()
+            print(f"{label}: {val}")
+
+
+def _emit_dry_run(data):
+    """Emit dry-run preview in the current format."""
+    if _FMT == "json":
+        _json_out({"ok": True, "dry_run": True, "data": data,
+                    "meta": {"version": "1.0"}})
+    else:
+        for key, val in data.items():
+            print(f"  {key}: {val}")
+        print()
+        print("Dry run — no API call made.")
+
+
+# ── Schema introspection ──────────────────────────────────────────────
+
+def _load_models_json():
+    """Load structured model metadata from docs/models.json."""
+    script_dir = Path(__file__).parent.resolve()
+    candidates = [
+        # Repo root: skills/imagenCN/scripts/ -> ../../../docs/models.json
+        script_dir.parent.parent.parent / "docs" / "models.json",
+        # Flat install: scripts/ -> ../docs/models.json
+        script_dir.parent / "docs" / "models.json",
+    ]
+    for path in candidates:
+        if path.exists():
+            try:
+                return json.loads(path.read_text())
+            except (json.JSONDecodeError, ValueError):
+                pass
+    return None
+
+
+def show_schema(target=None):
+    """Progressive schema introspection.
+
+    --schema              → list all platforms (compact)
+    --schema platforms    → full platform details
+    --schema models       → all models (grouped by platform)
+    --schema <model-id>   → single model's full metadata
+    """
+    data = _load_models_json()
+    if data is None:
+        _emit_error(EX_USAGE, "Schema data not found: docs/models.json is missing")
+        return
+
+    if target is None:
+        # Compact top-level listing
+        out = {"providers": [], "model_count": 0}
+        for p in data["providers"]:
+            out["providers"].append({
+                "id": p["id"], "name": p["shortName"], "nameCN": p["nameCN"],
+                "models": p["modelCount"], "envVar": p["envVar"],
+            })
+            out["model_count"] += p["modelCount"]
+        out["updated"] = data.get("updated", "unknown")
+        out["quick_reference"] = data.get("quickReference", [])
+        _json_out(out)
+
+    elif target == "platforms":
+        _json_out({"providers": data["providers"], "updated": data.get("updated")})
+
+    elif target == "models":
+        all_models = []
+        for p in data["providers"]:
+            for m in p["models"]:
+                m["provider"] = p["shortName"]
+                m["providerId"] = p["id"]
+                m["providerCN"] = p["nameCN"]
+                all_models.append(m)
+        _json_out({"models": all_models, "total": len(all_models),
+                    "updated": data.get("updated")})
+
+    else:
+        # Look up a specific model
+        for p in data["providers"]:
+            for m in p["models"]:
+                if m["id"] == target:
+                    m["provider"] = p["shortName"]
+                    m["providerId"] = p["id"]
+                    m["providerCN"] = p["nameCN"]
+                    m["envVar"] = p["envVar"]
+                    _json_out(m)
+                    return
+        _emit_error(EX_USAGE, f"Unknown model: {target}",
+                     hint="Use --schema models to list all models")
+
+
+# ── Output helpers ────────────────────────────────────────────────────
 
 def _out(msg, **kwargs):
-    """Print to stdout, using rich if available."""
+    """Print to stdout, using rich if available (table mode only)."""
+    if _FMT == "json":
+        return  # suppress human output in JSON mode
     if _HAS_RICH:
         console.print(msg, **kwargs)
     else:
@@ -100,6 +231,8 @@ def _out(msg, **kwargs):
 
 def _err(msg):
     """Print to stderr, using rich if available."""
+    if _FMT == "json":
+        return  # JSON errors are emitted via _emit_error
     if _HAS_RICH:
         err_console.print(msg)
     else:
@@ -244,13 +377,8 @@ WAN_SIZES = {
 def get_api_key():
     api_key = os.environ.get("DASHSCOPE_API_KEY")
     if not api_key:
-        print("Error: DASHSCOPE_API_KEY environment variable not set", file=sys.stderr)
-        print("\nTo set it:", file=sys.stderr)
-        print("  Windows (PowerShell): $env:DASHSCOPE_API_KEY = 'your-key'", file=sys.stderr)
-        print("  Windows (CMD): set DASHSCOPE_API_KEY=your-key", file=sys.stderr)
-        print("  macOS/Linux: export DASHSCOPE_API_KEY='your-key'", file=sys.stderr)
-        print("\nGet API key at: https://bailian.console.aliyun.com/", file=sys.stderr)
-        sys.exit(1)
+        _emit_error(EX_AUTH, "DASHSCOPE_API_KEY environment variable not set",
+                     hint="Get a key at https://bailian.console.aliyun.com/")
     return api_key
 
 
@@ -449,7 +577,10 @@ def save_image(url, output_path):
         output_path.write_bytes(response.content)
         return True
     except Exception as e:
-        print(f"Error: Failed to download image: {e}", file=sys.stderr)
+        if _FMT == "json":
+            _emit_error(EX_IO, f"Failed to download image: {e}", retryable=True)
+        else:
+            print(f"Error: Failed to download image: {e}", file=sys.stderr)
         return False
 
 
@@ -519,8 +650,12 @@ def list_models():
 
 
 def _validate_size(model, size):
-    """Warn if the requested size exceeds known per-model limits."""
-    if not size:
+    """Warn if the requested size exceeds known per-model limits.
+
+    In JSON mode, warnings are suppressed (caller should validate first).
+    In table mode, warnings go to stderr.
+    """
+    if not size or _FMT == "json":
         return
     # Ark: Seedream 5.0 does not support 4K
     if model == "doubao-seedream-5-0-260128" and size == "4K":
@@ -571,19 +706,15 @@ def _validate_size(model, size):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate images using Alibaba Cloud Bailian API",
+        description="Generate images via Chinese T2I platforms (DashScope/Ark/Hunyuan/Zhipu/StepFun)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   %(prog)s "A cute cat"
   %(prog)s --model wan2.7-image-pro --size 4K "Mountain landscape photo" ./landscape.png
-  %(prog)s --size 16:9 "Widescreen wallpaper" ./wallpaper.png
-  %(prog)s --platform ark "Editorial portrait, Vogue style" portrait.png
-  %(prog)s --platform hunyuan "Cinematic sci-fi scene" scifi.png
-  %(prog)s --platform zhipu "Chinese New Year greeting card" card.png
-  %(prog)s --platform stepfun "Product photo on white background" product.png
-  %(prog)s --no-extend "A cat" cat.png
-  %(prog)s --list-models
+  %(prog)s --format json --platform ark "Portrait" portrait.png
+  %(prog)s --schema           # list all platforms (JSON)
+  %(prog)s --schema qwen-image-2.0-pro   # model details (JSON)
         """
     )
     parser.add_argument("prompt", nargs="?", help="Text description of the image")
@@ -608,18 +739,37 @@ Examples:
                         help="Random seed for reproducibility")
     parser.add_argument("--no-extend", action="store_true",
                         help="Disable automatic prompt extension (DashScope only)")
+    parser.add_argument("--format", choices=["json", "table"],
+                        help="Output format (default: auto-detect from TTY)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Preview without generating (show what would be called)")
     parser.add_argument("--list-models", action="store_true", help="List available models")
+    parser.add_argument("--schema", nargs="?", const=None, default=None,
+                        help="Schema introspection: none=platforms, 'models'=all models, "
+                             "'<model-id>'=single model details")
     args = parser.parse_args()
 
+    # ── Global format mode ─────────────────────────────────────────
+    global _FMT
+    _FMT = _detect_format(args.format)
+
+    # ── Schema introspection (no API call needed) ──────────────────
+    if args.schema is not None or (args.schema is None and hasattr(args, 'schema') and
+                                    any(a.startswith('--schema') for a in sys.argv[1:])):
+        # Re-parse to handle --schema with an argument vs bare --schema
+        if args.schema is not None or args.prompt is None:
+            target = args.schema  # None for bare --schema, string for --schema <target>
+            show_schema(target)
+            return
+
+    # ── List models ────────────────────────────────────────────────
     if args.list_models:
         list_models()
         return
 
     if not args.prompt:
         parser.print_help()
-        sys.exit(1)
+        sys.exit(EX_USAGE)
 
     # Load config file (CLI args take precedence over config)
     config = load_config()
@@ -650,9 +800,10 @@ Examples:
 
     # Validate model
     if model not in all_models:
-        _err(f"[yellow]Warning:[/] Unknown model '{model}'. Using platform default"
-             if _HAS_RICH else
-             f"Warning: Unknown model '{model}'. Using platform default")
+        msg = (f"[yellow]Warning:[/] Unknown model '{model}'. Using platform default"
+               if _HAS_RICH else
+               f"Warning: Unknown model '{model}'. Using platform default")
+        _err(msg)
         model = get_default_model_for_platform(platform)
     elif args.platform or config_platform:
         # If platform is explicit (CLI or config), verify model belongs to it
@@ -664,16 +815,17 @@ Examples:
             "stepfun": STEPFUN_MODELS,
         }.get(effective_platform)
         if platform_models and model not in platform_models:
-            _err(f"[yellow]Warning:[/] Model '{model}' is not a "
-                 f"'{effective_platform}' model. Using platform default"
-                 if _HAS_RICH else
-                 f"Warning: Model '{model}' is not a "
-                 f"'{effective_platform}' model. Using platform default")
+            msg = (f"[yellow]Warning:[/] Model '{model}' is not a "
+                   f"'{effective_platform}' model. Using platform default"
+                   if _HAS_RICH else
+                   f"Warning: Model '{model}' is not a "
+                   f"'{effective_platform}' model. Using platform default")
+            _err(msg)
             model = get_default_model_for_platform(platform)
 
     size = resolve_size(args.size or config_size_arg, model, platform)
 
-    # Validate resolution against per-model limits
+    # Validate resolution against per-model limits (table mode only)
     _validate_size(model, size)
 
     # Resolve output path (auto-name if not specified)
@@ -686,8 +838,7 @@ Examples:
     # Handle input image (DashScope edit models only)
     input_image = args.image
     if platform == "dashscope" and model in EDIT_MODELS and not input_image:
-        print(f"Error: Model '{model}' is an editing model and requires --image", file=sys.stderr)
-        sys.exit(1)
+        _emit_error(EX_USAGE, f"Model '{model}' is an editing model and requires --image")
     if input_image and os.path.exists(input_image):
         input_image = f"file://{Path(input_image).resolve()}"
 
@@ -718,40 +869,48 @@ Examples:
         api_type = "ImageGeneration"
         endpoint = dashscope.base_http_api_url
 
-    if _HAS_RICH:
-        table = Table(show_header=False, box=None, padding=(0, 1))
-        table.add_column(style="bold cyan", justify="right")
-        table.add_column(style="white")
-        table.add_row("Prompt", f'"{args.prompt}"')
-        table.add_row("Platform", platform)
-        table.add_row("Model", f"{model} ([dim]{api_type}[/])")
-        if input_image:
-            table.add_row("Input", str(args.image))
-        table.add_row("Size", size or "auto (match input image)")
-        table.add_row("Endpoint", endpoint)
-        table.add_row("Output", str(output_path))
-        console.print()
-        console.print(table)
-        console.print()
-    else:
-        print(f"Generating image...")
-        print(f"Prompt: \"{args.prompt}\"")
-        print(f"Platform: {platform}")
-        print(f"Model: {model} ({api_type})")
-        if input_image:
-            print(f"Input image: {args.image}")
-        print(f"Size: {size or 'auto (match input image)'}")
-        print(f"Endpoint: {endpoint}")
-        print(f"Output: {output_path}")
-        print()
+    # ── Dry-run output ─────────────────────────────────────────────
+    dry_data = {
+        "prompt": args.prompt,
+        "platform": platform,
+        "model": model,
+        "api_type": api_type,
+        "size": size or "auto",
+        "endpoint": endpoint,
+        "output": str(output_path),
+    }
+    if input_image:
+        dry_data["input_image"] = args.image
 
     if args.dry_run:
-        _out("[dim]Dry run — no API call made.[/]" if _HAS_RICH
-             else "Dry run — no API call made.")
+        _emit_dry_run(dry_data)
         return
 
+    # ── Show preview in table mode ─────────────────────────────────
+    if _FMT == "table":
+        if _HAS_RICH:
+            table = Table(show_header=False, box=None, padding=(0, 1))
+            table.add_column(style="bold cyan", justify="right")
+            table.add_column(style="white")
+            for key, val in dry_data.items():
+                label = key.replace("_", " ").capitalize()
+                table.add_row(label, str(val))
+            console.print()
+            console.print(table)
+            console.print()
+        else:
+            print("Generating image...")
+            for key, val in dry_data.items():
+                label = key.replace("_", " ").capitalize()
+                print(f"{label}: {val}")
+            print()
+
+    # ── Execute generation ─────────────────────────────────────────
     try:
         if platform == "ark":
+            if not get_ark_api_key:
+                _emit_error(EX_AUTH, "Volcano Ark module not available",
+                             hint="Ensure volcano_ark.py is in the scripts directory")
             ark_key = get_ark_api_key()
             image_url = generate_with_ark(
                 ark_key, model, args.prompt, size,
@@ -760,6 +919,8 @@ Examples:
                 no_watermark=args.no_watermark,
             )
         elif platform == "hunyuan":
+            if not get_hunyuan_api_key:
+                _emit_error(EX_AUTH, "Hunyuan module not available")
             hy_key = get_hunyuan_api_key()
             image_url = generate_with_hunyuan(
                 hy_key, model, args.prompt, size,
@@ -768,10 +929,14 @@ Examples:
                 logo_add=args.logo,
             )
         elif platform == "zhipu":
+            if not get_zhipu_api_key:
+                _emit_error(EX_AUTH, "Zhipu module not available")
             zp_key = get_zhipu_api_key()
             image_url = generate_with_zhipu(zp_key, model, args.prompt, size,
                                             seed=args.seed)
         elif platform == "stepfun":
+            if not get_stepfun_api_key:
+                _emit_error(EX_AUTH, "StepFun module not available")
             sf_key = get_stepfun_api_key()
             image_url = generate_with_stepfun(sf_key, model, args.prompt, size,
                                               negative_prompt=args.negative)
@@ -792,44 +957,45 @@ Examples:
                                            args.negative,
                                            prompt_extend=not args.no_extend)
     except Exception as e:
-        _err(f"[bold red]Error:[/] API call failed: {e}")
-        sys.exit(1)
+        _emit_error(EX_API, f"API call failed: {e}", retryable=True)
 
     if platform in ("ark", "hunyuan", "zhipu", "stepfun"):
         # URL returned directly from generation function
         if not save_image(image_url, output_path):
-            sys.exit(1)
+            _emit_error(EX_IO, f"Failed to save image to {output_path}")
     else:
         # DashScope response handling
         if hasattr(rsp, 'status_code') and rsp.status_code != HTTPStatus.OK:
-            _err(f"[bold red]Error:[/] API returned {rsp.status_code}")
-            if hasattr(rsp, 'code'):
-                _err(f"Code: {rsp.code}")
-            if hasattr(rsp, 'message'):
-                _err(f"Message: {rsp.message}")
-            sys.exit(1)
+            msg = f"API returned {rsp.status_code}"
+            extra = {"http_status": rsp.status_code}
+            if hasattr(rsp, 'code') and rsp.code:
+                extra["api_code"] = str(rsp.code)
+            if hasattr(rsp, 'message') and rsp.message:
+                extra["api_message"] = str(rsp.message)
+            _emit_error(EX_API, msg, retryable=True, **extra)
 
         image_url = extract_image_url(rsp, model)
         if not image_url:
-            _err("[bold red]Error:[/] No image URL in response")
-            _err(f"Response: {rsp}")
-            sys.exit(1)
+            _emit_error(EX_API, "No image URL in response", retryable=True)
 
         if not save_image(image_url, output_path):
-            sys.exit(1)
+            _emit_error(EX_IO, f"Failed to save image to {output_path}")
 
+    # ── Success output ─────────────────────────────────────────────
     if output_path.exists() and output_path.stat().st_size > 0:
         file_size = get_file_size(output_path)
-        if _HAS_RICH:
-            _out(f"[bold green]✓[/] Image generated and saved  "
-                 f"[dim]{output_path} ({file_size})[/]")
-        else:
-            print("Success! Image generated and saved.")
-            print(f"File: {output_path}")
-            print(f"Size: {file_size}")
+        out_data = {
+            "output_path": str(output_path),
+            "size_bytes": output_path.stat().st_size,
+            "size_human": file_size,
+            "model": model,
+            "platform": platform,
+        }
+        meta = {"version": "1.0", "idempotency_note":
+                "Image generation is not idempotent — each call produces a new image."}
+        _emit_success(out_data, meta)
     else:
-        _err(f"[bold red]Error:[/] Failed to save image to {output_path}")
-        sys.exit(1)
+        _emit_error(EX_IO, f"Failed to save image to {output_path}")
 
 
 if __name__ == "__main__":
