@@ -32,6 +32,19 @@ Automatically activate this skill when:
 - User mentions any of these: Alibaba Cloud / Bailian / Qwen / Wan / DashScope, ByteDance / Volcano Ark / Seedream / Doubao, Tencent / Hunyuan
 - Any task where AI-generated image with strong Chinese support would be helpful
 
+## Model Reference
+
+When the user wants to compare models, check pricing, or browse options before
+choosing, open the local model reference page in their browser:
+
+```bash
+open ~/.claude/skills/imagenCN/docs/models.html
+```
+
+This page shows all 30 models across 5 platforms with pricing, resolution,
+feature highlights, and a quick-reference guide.  On Linux use `xdg-open`;
+the file also works from `file://` with no server needed.
+
 ## Workflow
 
 ### Step 1 — Refine the prompt (interactive, never skip)
