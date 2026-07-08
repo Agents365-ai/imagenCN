@@ -399,17 +399,6 @@ All other models are legacy/snapshot variants.
 | Price | Varies | ~0.22 | ~0.20 | ~0.06 | ~0.02 |
 | Env var | `DASHSCOPE_API_KEY` | `ARK_API_KEY` | `HUNYUAN_API_KEY` | `ZHIPUAI_API_KEY` | `STEP_API_KEY` |
 
-## Comparison with Imagen (Gemini)
-
-| Feature | ImagenCN (Bailian) | Imagen (Gemini) |
-|---------|-------------------|-----------------|
-| Chinese text rendering | Excellent | Good |
-| English text rendering | Excellent | Good |
-| Photorealistic images | Excellent | Good |
-| Speed | Medium | Fast |
-| Model variety | 15+ models | 3 models |
-| Max resolution | 4K (Wan2.7-Pro) | 2K |
-
 ## Examples
 
 ### Volcano Ark (ByteDance)
