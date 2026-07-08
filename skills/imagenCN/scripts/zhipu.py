@@ -70,7 +70,7 @@ def resolve_zhipu_size(size_input):
     return size_input
 
 
-def generate_with_zhipu(api_key, model, prompt, size):
+def generate_with_zhipu(api_key, model, prompt, size, seed=None):
     """Generate an image via Zhipu REST API and return the image URL."""
     if requests is None:
         print("Error: 'requests' package not installed", file=sys.stderr)
@@ -87,6 +87,8 @@ def generate_with_zhipu(api_key, model, prompt, size):
         "prompt": prompt,
         "size": size,
     }
+    if seed is not None:
+        body["seed"] = seed
 
     try:
         response = requests.post(ZHIPU_API_BASE, headers=headers, json=body,

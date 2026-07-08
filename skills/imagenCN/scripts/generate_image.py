@@ -1,20 +1,29 @@
 #!/usr/bin/env python3
 """
-ImagenCN - Alibaba Cloud Bailian Text-to-Image Script
+ImagenCN — Multi-Platform Chinese T2I Image Generation Script
 
-Generate images using Alibaba Cloud DashScope API with Qwen-Image and Wan Series models.
-Default endpoint is China region.
+Generate images using five Chinese T2I platforms:
+  - Alibaba Cloud Bailian (DashScope):  Qwen-Image, Wan Series, Z-Image
+  - ByteDance Volcano Ark:             Doubao-Seedream series
+  - Tencent Hunyuan:                   Hunyuan Image 3.0
+  - Zhipu / BigModel:                  CogView-4, GLM-Image
+  - StepFun / 阶跃星辰:                 Step-2X, Step-Image-Edit-2
 
 Usage:
     python generate_image.py "prompt" [output_path]
     python generate_image.py --model wan2.7-image-pro "prompt" output.png
     python generate_image.py --size 2K "prompt" output.png
+    python generate_image.py --platform ark "prompt" output.png
     python generate_image.py --model qwen-image-edit-max --image input.png "edit instruction" output.png
 
 Environment variables:
     DASHSCOPE_API_KEY (required) - Alibaba Cloud Bailian API Key
     DASHSCOPE_MODEL (optional) - Default model (default: qwen-image-2.0-pro)
     DASHSCOPE_API_BASE (optional) - API endpoint, defaults to China region
+    ARK_API_KEY (required for Ark) - Volcano Ark API Key
+    HUNYUAN_API_KEY (required for Hunyuan) - Tencent Hunyuan API Key
+    ZHIPUAI_API_KEY (required for Zhipu) - Zhipu API Key
+    STEP_API_KEY (required for StepFun) - StepFun API Key
 
 API Endpoints:
     China (default): https://dashscope.aliyuncs.com/api/v1
@@ -96,6 +105,9 @@ def _err(msg):
     else:
         print(msg, file=sys.stderr)
 
+
+# Ensure platform modules are importable from any working directory
+sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
 # Platform modules (lazy imports — SDK checked inside each generate function)
 try:
@@ -356,7 +368,8 @@ def create_output_dir(output_path):
         output_dir.mkdir(parents=True, exist_ok=True)
 
 
-def generate_with_synthesis(api_key, model, prompt, size, negative_prompt=None):
+def generate_with_synthesis(api_key, model, prompt, size, negative_prompt=None,
+                           prompt_extend=True):
     """Generate image using ImageSynthesis (for qwen-image-plus)."""
     params = {
         "api_key": api_key,
@@ -364,7 +377,7 @@ def generate_with_synthesis(api_key, model, prompt, size, negative_prompt=None):
         "prompt": prompt,
         "n": 1,
         "size": size,
-        "prompt_extend": True,
+        "prompt_extend": prompt_extend,
         "watermark": False,
     }
     if negative_prompt:
@@ -372,7 +385,8 @@ def generate_with_synthesis(api_key, model, prompt, size, negative_prompt=None):
     return ImageSynthesis.call(**params)
 
 
-def generate_with_generation(api_key, model, prompt, size, negative_prompt=None):
+def generate_with_generation(api_key, model, prompt, size, negative_prompt=None,
+                            prompt_extend=True):
     """Generate image using ImageGeneration (for wan2.6-t2i, wan2.7-image, etc)."""
     messages = [{"role": "user", "content": [{"text": prompt}]}]
     params = {
@@ -381,7 +395,7 @@ def generate_with_generation(api_key, model, prompt, size, negative_prompt=None)
         "messages": messages,
         "n": 1,
         "size": size,
-        "prompt_extend": True,
+        "prompt_extend": prompt_extend,
         "watermark": False,
     }
     if negative_prompt:
@@ -389,7 +403,8 @@ def generate_with_generation(api_key, model, prompt, size, negative_prompt=None)
     return ImageGeneration.call(**params)
 
 
-def generate_with_multimodal(api_key, model, prompt, size, negative_prompt=None, image=None):
+def generate_with_multimodal(api_key, model, prompt, size, negative_prompt=None, image=None,
+                            prompt_extend=True):
     """Generate image using MultiModalConversation (qwen-image-2.0/edit family, z-image)."""
     content = []
     if image:
@@ -401,7 +416,7 @@ def generate_with_multimodal(api_key, model, prompt, size, negative_prompt=None,
         "model": model,
         "messages": messages,
         "n": 1,
-        "prompt_extend": True,
+        "prompt_extend": prompt_extend,
         "watermark": False,
     }
     if size:
@@ -527,6 +542,31 @@ def _validate_size(model, size):
                       f"(requested {size}).")
         except (ValueError, IndexError):
             pass
+    # Zhipu: 512-2048 px, divisible by 16, total pixels <= 2^21
+    if model in ZHIPU_MODELS and ("x" in size):
+        try:
+            w_str, h_str = size.split("x")
+            w, h = int(w_str), int(h_str)
+            if w < 512 or w > 2048 or h < 512 or h > 2048:
+                _err("[yellow]Warning:[/] Zhipu requires 512-2048 px per side "
+                      f"(requested {size})."
+                      if _HAS_RICH else
+                      f"Warning: Zhipu requires 512-2048 px per side "
+                      f"(requested {size}).")
+            elif w % 16 != 0 or h % 16 != 0:
+                _err("[yellow]Warning:[/] Zhipu requires dimensions divisible "
+                      f"by 16 (requested {size})."
+                      if _HAS_RICH else
+                      f"Warning: Zhipu requires dimensions divisible by 16 "
+                      f"(requested {size}).")
+            elif w * h > 2_097_152:
+                _err("[yellow]Warning:[/] Zhipu total pixels must be <= 2^21 "
+                      f"(requested {size} = {w * h} px)."
+                      if _HAS_RICH else
+                      f"Warning: Zhipu total pixels must be <= 2^21 "
+                      f"(requested {size} = {w * h} px).")
+        except (ValueError, IndexError):
+            pass
 
 
 def main():
@@ -536,8 +576,13 @@ def main():
         epilog="""
 Examples:
   %(prog)s "A cute cat"
-  %(prog)s --model wan2.6-t2i "Mountain landscape photo" ./landscape.png
+  %(prog)s --model wan2.7-image-pro --size 4K "Mountain landscape photo" ./landscape.png
   %(prog)s --size 16:9 "Widescreen wallpaper" ./wallpaper.png
+  %(prog)s --platform ark "Editorial portrait, Vogue style" portrait.png
+  %(prog)s --platform hunyuan "Cinematic sci-fi scene" scifi.png
+  %(prog)s --platform zhipu "Chinese New Year greeting card" card.png
+  %(prog)s --platform stepfun "Product photo on white background" product.png
+  %(prog)s --no-extend "A cat" cat.png
   %(prog)s --list-models
         """
     )
@@ -561,6 +606,8 @@ Examples:
                         help="Auto-enhance prompt: 0=off 1=on (Tencent Hunyuan only)")
     parser.add_argument("--seed", type=int, default=None,
                         help="Random seed for reproducibility")
+    parser.add_argument("--no-extend", action="store_true",
+                        help="Disable automatic prompt extension (DashScope only)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Preview without generating (show what would be called)")
     parser.add_argument("--list-models", action="store_true", help="List available models")
@@ -712,21 +759,28 @@ Examples:
             )
         elif platform == "zhipu":
             zp_key = get_zhipu_api_key()
-            image_url = generate_with_zhipu(zp_key, model, args.prompt, size)
+            image_url = generate_with_zhipu(zp_key, model, args.prompt, size,
+                                            seed=args.seed)
         elif platform == "stepfun":
             sf_key = get_stepfun_api_key()
             image_url = generate_with_stepfun(sf_key, model, args.prompt, size,
                                               negative_prompt=args.negative)
         elif model in SYNTHESIS_MODELS:
             api_key = get_api_key()
-            rsp = generate_with_synthesis(api_key, model, args.prompt, size, args.negative)
+            rsp = generate_with_synthesis(api_key, model, args.prompt, size,
+                                          args.negative,
+                                          prompt_extend=not args.no_extend)
         elif model in MULTIMODAL_MODELS or model in ZIMAGE_MODELS or model in EDIT_MODELS:
             api_key = get_api_key()
-            rsp = generate_with_multimodal(api_key, model, args.prompt, size, args.negative,
-                                           image=input_image)
+            rsp = generate_with_multimodal(api_key, model, args.prompt, size,
+                                           args.negative,
+                                           image=input_image,
+                                           prompt_extend=not args.no_extend)
         else:
             api_key = get_api_key()
-            rsp = generate_with_generation(api_key, model, args.prompt, size, args.negative)
+            rsp = generate_with_generation(api_key, model, args.prompt, size,
+                                           args.negative,
+                                           prompt_extend=not args.no_extend)
     except Exception as e:
         _err(f"[bold red]Error:[/] API call failed: {e}")
         sys.exit(1)
