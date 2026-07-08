@@ -122,6 +122,30 @@ except ImportError:
     resolve_hunyuan_size = None  # type: ignore[assignment]
     get_hunyuan_api_key = None  # type: ignore[assignment]
 
+try:
+    from zhipu import (  # noqa: E402
+        generate_with_zhipu, ZHIPU_MODELS, ZHIPU_SIZES,
+        resolve_zhipu_size, get_zhipu_api_key,
+    )
+except ImportError:
+    generate_with_zhipu = None  # type: ignore[assignment]
+    ZHIPU_MODELS = set()
+    ZHIPU_SIZES = {}
+    resolve_zhipu_size = None  # type: ignore[assignment]
+    get_zhipu_api_key = None  # type: ignore[assignment]
+
+try:
+    from stepfun import (  # noqa: E402
+        generate_with_stepfun, STEPFUN_MODELS, STEPFUN_SIZES,
+        resolve_stepfun_size, get_stepfun_api_key,
+    )
+except ImportError:
+    generate_with_stepfun = None  # type: ignore[assignment]
+    STEPFUN_MODELS = set()
+    STEPFUN_SIZES = {}
+    resolve_stepfun_size = None  # type: ignore[assignment]
+    get_stepfun_api_key = None  # type: ignore[assignment]
+
 
 DEFAULT_MODEL = "qwen-image-2.0-pro"
 DEFAULT_SIZE = "2048*2048"
@@ -257,6 +281,10 @@ def detect_platform(model):
         return "ark"
     if model in HUNYUAN_MODELS:
         return "hunyuan"
+    if model in ZHIPU_MODELS:
+        return "zhipu"
+    if model in STEPFUN_MODELS:
+        return "stepfun"
     return "dashscope"
 
 
@@ -266,6 +294,10 @@ def get_default_model_for_platform(platform):
         return os.environ.get("ARK_MODEL", "doubao-seedream-5-0-260128")
     if platform == "hunyuan":
         return os.environ.get("HUNYUAN_MODEL", "hy-image-v3.0")
+    if platform == "zhipu":
+        return os.environ.get("ZHIPUAI_MODEL", "cogview-4")
+    if platform == "stepfun":
+        return os.environ.get("STEP_MODEL", "step-2x-large")
     return os.environ.get("DASHSCOPE_MODEL", DEFAULT_MODEL)
 
 
@@ -278,6 +310,10 @@ def resolve_size(size_input, model, platform=None):
         return resolve_ark_size(size_input, model)
     if platform == "hunyuan" and resolve_hunyuan_size is not None:
         return resolve_hunyuan_size(size_input)
+    if platform == "zhipu" and resolve_zhipu_size is not None:
+        return resolve_zhipu_size(size_input)
+    if platform == "stepfun" and resolve_stepfun_size is not None:
+        return resolve_stepfun_size(size_input)
 
     # DashScope size resolution (unchanged)
     if model in EDIT_MODELS:
@@ -440,6 +476,14 @@ def list_models():
     for m in sorted(HUNYUAN_MODELS):
         default = " (default)" if m == DEFAULT_MODEL else ""
         print(f"  - {m}{default}")
+    print("\nZhipu / BigModel (CogView-4 / GLM-Image) [OpenAI-compatible API]:")
+    for m in sorted(ZHIPU_MODELS):
+        default = " (default)" if m == DEFAULT_MODEL else ""
+        print(f"  - {m}{default}")
+    print("\nStepFun / 阶跃星辰 (Step-2X) [OpenAI-compatible API]:")
+    for m in sorted(STEPFUN_MODELS):
+        default = " (default)" if m == DEFAULT_MODEL else ""
+        print(f"  - {m}{default}")
     print("\nSize presets:")
     print("  Qwen-Image 2.0:", ", ".join(QWEN2_SIZES.keys()))
     print("  Z-Image:", ", ".join(ZIMAGE_SIZES.keys()))
@@ -447,12 +491,16 @@ def list_models():
     print("  Wan Series:", ", ".join(WAN_SIZES.keys()))
     print("  Volcano Ark:", ", ".join(ARK_SIZES.keys()) if ARK_SIZES else "N/A")
     print("  Tencent Hunyuan:", ", ".join(HUNYUAN_SIZES.keys()) if HUNYUAN_SIZES else "N/A")
+    print("  Zhipu:", ", ".join(ZHIPU_SIZES.keys()) if ZHIPU_SIZES else "N/A")
+    print("  StepFun:", ", ".join(STEPFUN_SIZES.keys()) if STEPFUN_SIZES else "N/A")
     print("\nAPI endpoints:")
     for region, url in API_ENDPOINTS.items():
         default = " (default)" if region == "cn" else ""
         print(f"  - {region}: {url}{default}")
     print(f"  - Volcano Ark: https://ark.cn-beijing.volces.com/api/v3")
     print(f"  - Tencent Hunyuan: https://tokenhub.tencentmaas.com/v1/images/generations")
+    print(f"  - Zhipu: https://api.z.ai/api/paas/v4/images/generations")
+    print(f"  - StepFun: https://api.stepfun.com/v1/images/generations")
 
 
 def _validate_size(model, size):
@@ -506,7 +554,8 @@ Examples:
                         help="Add AI logo: 0=no, 1=yes (Tencent Hunyuan only)")
     parser.add_argument("--no-watermark", action="store_true",
                         help="Disable watermark (Volcano Ark only)")
-    parser.add_argument("--platform", "-p", choices=["dashscope", "ark", "hunyuan"],
+    parser.add_argument("--platform", "-p",
+                        choices=["dashscope", "ark", "hunyuan", "zhipu", "stepfun"],
                         help="Target platform (auto-detect from model name by default)")
     parser.add_argument("--revise", type=int, choices=[0, 1], default=None,
                         help="Auto-enhance prompt: 0=off 1=on (Tencent Hunyuan only)")
@@ -544,7 +593,8 @@ Examples:
         platform = config_platform or detect_platform(model)
 
     all_models = (SYNTHESIS_MODELS | GENERATION_MODELS | MULTIMODAL_MODELS |
-                  ZIMAGE_MODELS | EDIT_MODELS | ARK_MODELS | HUNYUAN_MODELS)
+                  ZIMAGE_MODELS | EDIT_MODELS | ARK_MODELS | HUNYUAN_MODELS |
+                  ZHIPU_MODELS | STEPFUN_MODELS)
 
     # Validate model
     if model not in all_models:
@@ -556,6 +606,8 @@ Examples:
         platform_models = {
             "ark": ARK_MODELS,
             "hunyuan": HUNYUAN_MODELS,
+            "zhipu": ZHIPU_MODELS,
+            "stepfun": STEPFUN_MODELS,
         }.get(effective_platform)
         if platform_models and model not in platform_models:
             _err(f"[yellow]Warning:[/] Model '{model}' is not a "
@@ -593,6 +645,12 @@ Examples:
     elif platform == "hunyuan":
         api_type = "Tencent Hunyuan (OpenAI-compatible)"
         endpoint = "https://tokenhub.tencentmaas.com/v1/images/generations"
+    elif platform == "zhipu":
+        api_type = "Zhipu (OpenAI-compatible)"
+        endpoint = "https://api.z.ai/api/paas/v4/images/generations"
+    elif platform == "stepfun":
+        api_type = "StepFun (OpenAI-compatible)"
+        endpoint = "https://api.stepfun.com/v1/images/generations"
     elif model in SYNTHESIS_MODELS:
         api_type = "ImageSynthesis"
         endpoint = dashscope.base_http_api_url
@@ -652,6 +710,13 @@ Examples:
                 revise=args.revise,
                 logo_add=args.logo,
             )
+        elif platform == "zhipu":
+            zp_key = get_zhipu_api_key()
+            image_url = generate_with_zhipu(zp_key, model, args.prompt, size)
+        elif platform == "stepfun":
+            sf_key = get_stepfun_api_key()
+            image_url = generate_with_stepfun(sf_key, model, args.prompt, size,
+                                              negative_prompt=args.negative)
         elif model in SYNTHESIS_MODELS:
             api_key = get_api_key()
             rsp = generate_with_synthesis(api_key, model, args.prompt, size, args.negative)
@@ -666,7 +731,7 @@ Examples:
         _err(f"[bold red]Error:[/] API call failed: {e}")
         sys.exit(1)
 
-    if platform in ("ark", "hunyuan"):
+    if platform in ("ark", "hunyuan", "zhipu", "stepfun"):
         # URL returned directly from generation function
         if not save_image(image_url, output_path):
             sys.exit(1)
