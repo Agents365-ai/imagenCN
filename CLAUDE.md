@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Language
 
-All code, comments, and documentation must be in English.
+All code, comments, and documentation must be in English (README_CN.md is the sole exception — it is the Chinese companion to README.md).
 
 ## Git Commits
 
@@ -32,51 +32,51 @@ A Claude Code skill for AI image generation using five Chinese T2I platforms:
 ## Key Command
 
 ```bash
-# Basic usage
-python scripts/generate_image.py "prompt" output.png
+# Basic usage (from repo root)
+python skills/imagenCN/scripts/generate_image.py "prompt" output.png
 
 # With model and size (DashScope)
-python scripts/generate_image.py --model wan2.7-image-pro --size 16:9 "prompt" output.png
+python skills/imagenCN/scripts/generate_image.py --model wan2.7-image-pro --size 16:9 "prompt" output.png
 
 # Volcano Ark (ByteDance) — requires ARK_API_KEY
-python scripts/generate_image.py --platform ark "prompt" output.png
+python skills/imagenCN/scripts/generate_image.py --platform ark "prompt" output.png
 
 # Tencent Hunyuan — requires HUNYUAN_API_KEY
-python scripts/generate_image.py --platform hunyuan "prompt" output.png
+python skills/imagenCN/scripts/generate_image.py --platform hunyuan "prompt" output.png
 
 # Zhipu / BigModel — requires ZHIPUAI_API_KEY
-python scripts/generate_image.py --platform zhipu "prompt" output.png
+python skills/imagenCN/scripts/generate_image.py --platform zhipu "prompt" output.png
 
 # StepFun — requires STEP_API_KEY
-python scripts/generate_image.py --platform stepfun "prompt" output.png
+python skills/imagenCN/scripts/generate_image.py --platform stepfun "prompt" output.png
 
 # List models (all 5 platforms)
-python scripts/generate_image.py --list-models
+python skills/imagenCN/scripts/generate_image.py --list-models
 ```
 
 ## Advanced Options
 
 ```bash
 # Disable automatic prompt extension (DashScope only)
-python scripts/generate_image.py --no-extend "prompt" output.png
+python skills/imagenCN/scripts/generate_image.py --no-extend "prompt" output.png
 
 # Set random seed for reproducibility
-python scripts/generate_image.py --seed 42 "prompt" output.png
+python skills/imagenCN/scripts/generate_image.py --seed 42 "prompt" output.png
 
 # Guidance scale (Volcano Ark only)
-python scripts/generate_image.py --platform ark --guidance-scale 7.5 "prompt" output.png
+python skills/imagenCN/scripts/generate_image.py --platform ark --guidance-scale 7.5 "prompt" output.png
 
 # Auto-enhance prompt (Tencent Hunyuan only)
-python scripts/generate_image.py --platform hunyuan --revise 0 "prompt" output.png
+python skills/imagenCN/scripts/generate_image.py --platform hunyuan --revise 0 "prompt" output.png
 
 # Add AI logo (Tencent Hunyuan only)
-python scripts/generate_image.py --platform hunyuan --logo 1 "prompt" output.png
+python skills/imagenCN/scripts/generate_image.py --platform hunyuan --logo 1 "prompt" output.png
 
 # Disable watermark (Volcano Ark only)
-python scripts/generate_image.py --platform ark --no-watermark "prompt" output.png
+python skills/imagenCN/scripts/generate_image.py --platform ark --no-watermark "prompt" output.png
 
 # Dry run (preview without generating)
-python scripts/generate_image.py --dry-run "prompt"
+python skills/imagenCN/scripts/generate_image.py --dry-run "prompt"
 ```
 
 ## Environment Variables

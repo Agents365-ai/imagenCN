@@ -29,7 +29,7 @@ A Claude Code / OpenClaw skill for AI image generation using Alibaba Cloud Baili
 
 ## Features
 
-- **Alibaba Cloud Bailian (DashScope)**: Qwen-Image 2.0, Edit, Wan Series, Z-Image — 19 models
+- **Alibaba Cloud Bailian (DashScope)**: Qwen-Image 2.0, Edit, Wan Series, Z-Image — 21 models
 - **ByteDance Volcano Ark**: Doubao-Seedream series (5.0/4.5/4.0) — 3 models, up to 4K
 - **Tencent Hunyuan**: Hunyuan Image 3.0 — flagship, complex Chinese composition
 - **Zhipu / BigModel**: CogView-4, GLM-Image — 3 models, native Chinese text in images
@@ -111,6 +111,8 @@ Project-level `.imagenCN.json` overrides user-level. CLI args override both.
 export DASHSCOPE_MODEL="wan2.7-image-pro"       # DashScope default
 export ARK_MODEL="doubao-seedream-5-0-260128"   # Volcano Ark default
 export HUNYUAN_MODEL="hy-image-v3.0"            # Tencent Hunyuan default
+export ZHIPUAI_MODEL="cogview-4"                # Zhipu default
+export STEP_MODEL="step-2x-large"               # StepFun default
 
 # Set API endpoint (DashScope only, default: cn)
 export DASHSCOPE_API_BASE="cn"  # or "sg", "us", or full URL
@@ -184,6 +186,7 @@ python scripts/generate_image.py --list-models
 | `doubao-seedream-4-0-250828` | ByteDance Seedream 4.0, budget-friendly 4K |
 | `hy-image-v3.0` | Tencent Hunyuan flagship, strong Chinese composition understanding |
 | `cogview-4` | Zhipu CogView-4, native Chinese text in images |
+| `cogview-4-250304` | CogView-4 fixed snapshot (Mar 2025), reproducible results |
 | `glm-image` | Zhipu GLM-Image flagship, up to 2048×2048 |
 | `step-2x-large` | StepFun high quality, 0.1 RMB/image |
 | `step-image-edit-2` | StepFun ultra-cheap, 0.02 RMB/image, negative prompt support |
@@ -236,6 +239,23 @@ python scripts/generate_image.py --list-models
 - `9:16` → 1080:1920
 - `4:3` → 1600:1200
 - `3:4` → 1200:1600
+- `3:2` → 1920:1280
+- `2:3` → 1280:1920
+
+**Zhipu (CogView-4 / GLM-Image):**
+- `1:1` → 1024x1024 (default)
+- `16:9` → 1344x768
+- `9:16` → 768x1344
+- `4:3` → 1152x864
+- `3:4` → 864x1152
+- `2:1` → 1440x720
+- `1:2` → 720x1440
+
+**StepFun (Step-2X):**
+- `1:1` → 1024x1024 (default)
+- `1:1-small` → 512x512
+- `16:9` → 1280x800
+- `9:16` → 800x1280
 
 ## API Endpoints
 

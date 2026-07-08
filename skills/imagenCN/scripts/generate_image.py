@@ -637,7 +637,12 @@ Examples:
     else:
         model = (args.model or config_model or
                  os.environ.get("DASHSCOPE_MODEL", DEFAULT_MODEL))
-        platform = config_platform or detect_platform(model)
+        # CLI --model takes precedence over config platform: detect from the
+        # model the user explicitly chose, not from a stale config entry.
+        if args.model:
+            platform = detect_platform(model)
+        else:
+            platform = config_platform or detect_platform(model)
 
     all_models = (SYNTHESIS_MODELS | GENERATION_MODELS | MULTIMODAL_MODELS |
                   ZIMAGE_MODELS | EDIT_MODELS | ARK_MODELS | HUNYUAN_MODELS |
@@ -645,7 +650,9 @@ Examples:
 
     # Validate model
     if model not in all_models:
-        _err(f"[yellow]Warning:[/] Unknown model '{model}'. Using platform default")
+        _err(f"[yellow]Warning:[/] Unknown model '{model}'. Using platform default"
+             if _HAS_RICH else
+             f"Warning: Unknown model '{model}'. Using platform default")
         model = get_default_model_for_platform(platform)
     elif args.platform or config_platform:
         # If platform is explicit (CLI or config), verify model belongs to it
@@ -658,7 +665,10 @@ Examples:
         }.get(effective_platform)
         if platform_models and model not in platform_models:
             _err(f"[yellow]Warning:[/] Model '{model}' is not a "
-                  f"'{effective_platform}' model. Using platform default")
+                 f"'{effective_platform}' model. Using platform default"
+                 if _HAS_RICH else
+                 f"Warning: Model '{model}' is not a "
+                 f"'{effective_platform}' model. Using platform default")
             model = get_default_model_for_platform(platform)
 
     size = resolve_size(args.size or config_size_arg, model, platform)

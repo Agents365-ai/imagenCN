@@ -55,7 +55,7 @@ def resolve_stepfun_size(size_input):
     """Resolve a size preset or custom dimension string for StepFun.
 
     StepFun accepts "WxH" pixel strings.  step-2x-large supports
-    256x256 to 1024x1024; step-image-edit-2 uses height-first format.
+    256x256 to 1024x1024; step-image-edit-2 supports the same ranges.
     """
     if not size_input:
         return "1024x1024"

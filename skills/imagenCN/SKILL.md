@@ -1,11 +1,11 @@
 ---
 name: imagenCN
-description: Use when generating images with Alibaba Cloud Bailian API, especially for Chinese text rendering or photorealistic images
+description: Multi-platform AI image generation via DashScope/Ark/Hunyuan/Zhipu/StepFun, specializing in Chinese text rendering and photorealistic images
 author: Agents365-ai
 created: 2024-12-01
 updated: 2026-07-05
 homepage: https://github.com/Agents365-ai/imagenCN
-metadata: {"openclaw":{"requires":{"bins":["python3"],"env":["DASHSCOPE_API_KEY","ARK_API_KEY","HUNYUAN_API_KEY","ZHIPUAI_API_KEY","STEP_API_KEY"]},"primaryEnv":"DASHSCOPE_API_KEY","emoji":"🎨"}}
+metadata: {"openclaw":{"requires":{"bins":["python3"],"env":["DASHSCOPE_API_KEY"]},"primaryEnv":"DASHSCOPE_API_KEY","emoji":"🎨"}}
 ---
 
 # ImagenCN - Alibaba Cloud Bailian Text-to-Image Skill
@@ -332,7 +332,7 @@ All keys are optional.  Priority (highest first):
 1. CLI arguments (`--platform`, `--model`, `--size`)
 2. Project config (`.imagenCN.json` in current directory)
 3. User config (`~/.imagenCN.json`)
-4. Environment variables (`DASHSCOPE_MODEL`, `ARK_MODEL`, `HUNYUAN_MODEL`)
+4. Environment variables (`DASHSCOPE_MODEL`, `ARK_MODEL`, `HUNYUAN_MODEL`, `ZHIPUAI_MODEL`, `STEP_MODEL`)
 5. Built-in defaults
 
 ## API Endpoints

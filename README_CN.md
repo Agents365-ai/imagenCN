@@ -27,7 +27,7 @@
 
 ## 特性
 
-- **阿里云百炼 (DashScope)**: 通义千问 2.0、编辑版、万相系列、Z-Image — 共 19 个模型
+- **阿里云百炼 (DashScope)**: 通义千问 2.0、编辑版、万相系列、Z-Image — 共 21 个模型
 - **字节火山方舟**: 豆包 Seedream 系列 (5.0/4.5/4.0) — 3 个模型，最高 4K
 - **腾讯混元**: 混元生图 3.0 — 旗舰模型，复杂中文语义理解
 - **智谱 / BigModel**: CogView-4、GLM-Image — 3 个模型，图片中直接渲染中文文字
@@ -109,6 +109,8 @@ export STEP_API_KEY="your_api_key"
 export DASHSCOPE_MODEL="wan2.7-image-pro"       # DashScope 默认
 export ARK_MODEL="doubao-seedream-5-0-260128"   # 火山方舟默认
 export HUNYUAN_MODEL="hy-image-v3.0"            # 腾讯混元默认
+export ZHIPUAI_MODEL="cogview-4"                # 智谱默认
+export STEP_MODEL="step-2x-large"               # 阶跃星辰默认
 
 # 设置 API 端点（仅 DashScope，默认: cn）
 export DASHSCOPE_API_BASE="cn"  # 或 "sg", "us", 或完整 URL
@@ -182,6 +184,7 @@ python scripts/generate_image.py --list-models
 | `doubao-seedream-4-0-250828` | 字节 Seedream 4.0，高性价比 4K |
 | `hy-image-v3.0` | 腾讯混元旗舰，复杂中文语义理解，最高支持千字级 prompt |
 | `cogview-4` | 智谱 CogView-4，图片中直接渲染中文文字 |
+| `cogview-4-250304` | CogView-4 固定快照版（2025年3月），可复现结果 |
 | `glm-image` | 智谱 GLM-Image 旗舰，最高 2048×2048 |
 | `step-2x-large` | 阶跃星辰 Step-2X 高品质，0.1 元/张 |
 | `step-image-edit-2` | 阶跃星辰超低价，0.02 元/张，支持负面提示词 |
@@ -234,6 +237,23 @@ python scripts/generate_image.py --list-models
 - `9:16` → 1080:1920
 - `4:3` → 1600:1200
 - `3:4` → 1200:1600
+- `3:2` → 1920:1280
+- `2:3` → 1280:1920
+
+**智谱 (CogView-4 / GLM-Image):**
+- `1:1` → 1024x1024（默认）
+- `16:9` → 1344x768
+- `9:16` → 768x1344
+- `4:3` → 1152x864
+- `3:4` → 864x1152
+- `2:1` → 1440x720
+- `1:2` → 720x1440
+
+**阶跃星辰 (Step-2X):**
+- `1:1` → 1024x1024（默认）
+- `1:1-small` → 512x512
+- `16:9` → 1280x800
+- `9:16` → 800x1280
 
 ## API 端点
 
