@@ -2,7 +2,7 @@
 
 [中文文档](README_CN.md)
 
-A Claude Code / OpenClaw skill for AI image generation using Alibaba Cloud Bailian, ByteDance Volcano Ark, and Tencent Hunyuan APIs.
+A Claude Code / OpenClaw skill for AI image generation using Alibaba Cloud Bailian, ByteDance Volcano Ark, Tencent Hunyuan, Zhipu BigModel, and StepFun APIs.
 
 ## Why This Skill?
 
@@ -10,8 +10,8 @@ A Claude Code / OpenClaw skill for AI image generation using Alibaba Cloud Baili
 |---------|-----------|-------------------|-------------------|
 | **Chinese text rendering** | ✓ Qwen-Image optimized | ✗ No image generation | Partial |
 | **Photorealistic images** | ✓ Wan + Seedream multi-model | ✗ No image generation | Partial |
-| **Multi-platform** | ✓ 3 platforms, 20+ models | ✗ N/A | Usually single platform |
-| **Multi-model selection** | ✓ 20+ models to choose from | ✗ N/A | Usually single model |
+| **Multi-platform** | ✓ 5 platforms, 28+ models | ✗ N/A | Usually single platform |
+| **Multi-model selection** | ✓ 28+ models to choose from | ✗ N/A | Usually single model |
 | **Size presets** | ✓ 10+ aspect ratios | ✗ N/A | Partial |
 | **Negative prompts** | ✓ Fine-grained control | ✗ N/A | Partial |
 | **CLI direct invocation** | ✓ Script ready to use | ✗ N/A | Requires custom code |
@@ -32,6 +32,8 @@ A Claude Code / OpenClaw skill for AI image generation using Alibaba Cloud Baili
 - **Alibaba Cloud Bailian (DashScope)**: Qwen-Image 2.0, Edit, Wan Series, Z-Image — 19 models
 - **ByteDance Volcano Ark**: Doubao-Seedream series (5.0/4.5/4.0) — 3 models, up to 4K
 - **Tencent Hunyuan**: Hunyuan Image 3.0 — flagship, complex Chinese composition
+- **Zhipu / BigModel**: CogView-4, GLM-Image — 3 models, native Chinese text in images
+- **StepFun / 阶跃星辰**: Step-2X, Step-Image-Edit-2 — 2 models, ultra-cheap volume gen
 - **Multiple size presets**: 1:1, 16:9, 9:16, 4:3, 3:4, plus 1K/2K/3K/4K
 - **Cross-platform**: Windows, macOS, Linux support
 - **Multiple API regions**: China (default), Singapore, Virginia (DashScope)
@@ -148,7 +150,7 @@ python scripts/generate_image.py --model qwen-image-edit-max --image input.png "
 # With negative prompt (DashScope)
 python scripts/generate_image.py --negative "blurry" "High quality portrait" portrait.png
 
-# List all 3 platforms' models
+# List all 5 platforms' models
 python scripts/generate_image.py --list-models
 ```
 

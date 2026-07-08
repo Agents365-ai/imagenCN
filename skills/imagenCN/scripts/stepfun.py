@@ -86,6 +86,9 @@ def generate_with_stepfun(api_key, model, prompt, size, negative_prompt=None):
     }
     if negative_prompt and model == "step-image-edit-2":
         body["negative_prompt"] = negative_prompt
+    elif negative_prompt and model != "step-image-edit-2":
+        print(f"Warning: --negative is only supported by step-image-edit-2, "
+              f"ignored for {model}", file=sys.stderr)
 
     try:
         response = requests.post(STEPFUN_API_BASE, headers=headers, json=body,

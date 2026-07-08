@@ -5,7 +5,7 @@ author: Agents365-ai
 created: 2024-12-01
 updated: 2026-07-05
 homepage: https://github.com/Agents365-ai/imagenCN
-metadata: {"openclaw":{"requires":{"bins":["python3"],"env":["DASHSCOPE_API_KEY"]},"primaryEnv":"DASHSCOPE_API_KEY","emoji":"🎨"}}
+metadata: {"openclaw":{"requires":{"bins":["python3"],"env":["DASHSCOPE_API_KEY","ARK_API_KEY","HUNYUAN_API_KEY","ZHIPUAI_API_KEY","STEP_API_KEY"]},"primaryEnv":"DASHSCOPE_API_KEY","emoji":"🎨"}}
 ---
 
 # ImagenCN - Alibaba Cloud Bailian Text-to-Image Skill
@@ -247,6 +247,27 @@ python ~/.claude/skills/imagenCN/scripts/generate_image.py --size 1280*720 "Cust
 ```bash
 # With negative prompt
 python ~/.claude/skills/imagenCN/scripts/generate_image.py --negative "blurry, low quality" "High quality portrait" portrait.png
+
+# Disable automatic prompt extension (DashScope only)
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --no-extend "A photorealistic cat" cat.png
+
+# Set random seed for reproducibility
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --seed 42 "A cat" cat.png
+
+# Guidance scale (Volcano Ark only)
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --platform ark --guidance-scale 7.5 "Portrait" portrait.png
+
+# Disable watermark (Volcano Ark only)
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --platform ark --no-watermark "Artwork" art.png
+
+# Auto-enhance prompt on/off (Tencent Hunyuan only, --revise 0=off 1=on)
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --platform hunyuan --revise 0 "A cat" cat.png
+
+# Add AI logo (Tencent Hunyuan only, --logo 0=no 1=yes)
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --platform hunyuan --logo 1 "Poster" poster.png
+
+# Dry run (preview without making API call)
+python ~/.claude/skills/imagenCN/scripts/generate_image.py --dry-run --platform ark "Test prompt"
 
 # List all models
 python ~/.claude/skills/imagenCN/scripts/generate_image.py --list-models
