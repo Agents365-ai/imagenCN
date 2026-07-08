@@ -478,12 +478,25 @@ def resolve_size(size_input, model, platform=None):
     if size_input in sizes:
         return sizes[size_input]
     if "*" in size_input or "x" in size_input:
-        return size_input.replace("x", "*")
-    return size_input
+        resolved = size_input.replace("x", "*")
+    else:
+        resolved = size_input
+    # Validate against per-model limits at the boundary (P5)
+    _validate_size(model, resolved)
+    return resolved
 
 
-def make_output_name(platform, model):
-    """Generate a descriptive output filename: platform-model-timestamp.png."""
+def make_output_name(platform, model, idempotency_key=None):
+    """Generate output filename.
+
+    With idempotency_key: stable filename for reproducible paths.
+    Without: platform-model-timestamp.png.
+    """
+    if idempotency_key:
+        safe_key = re.sub(r"[^a-zA-Z0-9._-]", "-", str(idempotency_key))
+        safe_key = safe_key.strip("-")[:64]
+        safe_model = re.sub(r"[^a-zA-Z0-9._-]", "-", model).strip("-")
+        return f"{platform}-{safe_model}-{safe_key}.png"
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
     safe_model = re.sub(r"[^a-zA-Z0-9._-]", "-", model)
     safe_model = safe_model.strip("-")
@@ -741,12 +754,33 @@ Examples:
                         help="Disable automatic prompt extension (DashScope only)")
     parser.add_argument("--format", choices=["json", "table"],
                         help="Output format (default: auto-detect from TTY)")
+    parser.add_argument("--idempotency-key", help="Stable key for reproducible output filename; "
+                        "skips generation if output file already exists")
     parser.add_argument("--dry-run", action="store_true",
                         help="Preview without generating (show what would be called)")
     parser.add_argument("--list-models", action="store_true", help="List available models")
     parser.add_argument("--schema", nargs="?", const=None, default=None,
                         help="Schema introspection: none=platforms, 'models'=all models, "
                              "'<model-id>'=single model details")
+
+    # ── Progressive help (P3): intercept before argparse exits ──
+    # --help models → list all models
+    # --help <model> → model details via schema
+    for i, a in enumerate(sys.argv[1:], start=1):
+        if a in ("--help", "-h"):
+            if i + 1 < len(sys.argv):
+                target = sys.argv[i + 1]
+                if target == "models":
+                    list_models()
+                    sys.exit(0)
+                all_model_ids = (SYNTHESIS_MODELS | GENERATION_MODELS | MULTIMODAL_MODELS |
+                                 ZIMAGE_MODELS | EDIT_MODELS | ARK_MODELS | HUNYUAN_MODELS |
+                                 ZHIPU_MODELS | STEPFUN_MODELS)
+                if target in all_model_ids:
+                    show_schema(target)
+                    return
+            break
+
     args = parser.parse_args()
 
     # ── Global format mode ─────────────────────────────────────────
@@ -825,15 +859,26 @@ Examples:
 
     size = resolve_size(args.size or config_size_arg, model, platform)
 
-    # Validate resolution against per-model limits (table mode only)
-    _validate_size(model, size)
-
     # Resolve output path (auto-name if not specified)
     if args.output:
         output_path = Path(args.output)
     else:
-        output_path = Path(make_output_name(platform, model))
+        output_path = Path(make_output_name(platform, model,
+                                            idempotency_key=args.idempotency_key))
     create_output_dir(output_path)
+
+    # Idempotency: skip generation if output file already exists
+    if args.idempotency_key and output_path.exists() and output_path.stat().st_size > 0:
+        file_size = get_file_size(output_path)
+        _emit_success({
+            "output_path": str(output_path),
+            "size_bytes": output_path.stat().st_size,
+            "size_human": file_size,
+            "model": model,
+            "platform": platform,
+            "cached": True,
+        }, {"version": "1.0", "idempotency": "Returned cached result for key: " + args.idempotency_key})
+        return
 
     # Handle input image (DashScope edit models only)
     input_image = args.image
