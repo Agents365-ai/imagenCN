@@ -32,10 +32,22 @@ Automatically activate this skill when:
 
 ## Workflow
 
-1. Pick a model based on the request (see Model Selection Guide below). Default to `qwen-image-2.0-pro` if unsure.
-2. Pick a size: native 2K for the Qwen-Image 2.0 family, `1K`/`2K`/`4K` for Wan2.7, or an aspect-ratio preset (`16:9`, `1:1`, etc.).
-3. Run `scripts/generate_image.py` with the prompt and output path.
-4. If the output path was implicit, save into the user's current working directory.
+1. **Refine the prompt** (critical — never skip).  Users often give short, casual
+   descriptions.  Expand them into a detailed, high-quality prompt before calling the
+   API.  Add, as appropriate:
+   - Subject details (shape, colour, material, expression, pose)
+   - Lighting (golden hour, studio, rim light, soft diffused, neon, cinematic)
+   - Composition (rule of thirds, shallow depth of field, wide shot, close-up)
+   - Style / medium (photorealistic, oil painting, watercolour, 3D render, vector)
+   - Mood / atmosphere (serene, dramatic, whimsical, dystopian, elegant)
+   - Quality keywords (8K, hyperdetailed, award-winning, professional photography)
+   - For Chinese text on images: describe the text content, placement, font style
+     (e.g. calligraphy, sans-serif, bold), colour, and size
+
+2. Pick a model based on the request (see Model Selection Guide below). Default to `qwen-image-2.0-pro` if unsure.
+3. Pick a size: native 2K for the Qwen-Image 2.0 family, `1K`/`2K`/`4K` for Wan2.7, or an aspect-ratio preset (`16:9`, `1:1`, etc.).
+4. Run `scripts/generate_image.py` with the refined prompt and output path.
+5. If the output path was implicit, save into the user's current working directory.
 
 ## Models
 
