@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-自然语言生成高质量图像的 Claude Code / OpenClaw 技能，支持中文文字渲染和写实摄影。
+自然语言生成高质量图像的 Claude Code / OpenClaw 技能，支持阿里云百炼、字节火山方舟、腾讯混元三大平台。
 
 ## 为什么选择这个技能？
 
@@ -23,14 +23,12 @@
 
 ## 特性
 
-- **通义千问 2.0 (Qwen-Image 2.0)**: 最新旗舰，原生 2K 分辨率，专业字体渲染
-- **通义千问编辑版 (Qwen-Image Edit)**: 指令式图像编辑（需 `--image` 输入图）
-- **通义千问经典版 (Qwen-Image legacy)**: 中英文文本渲染
-- **通义万相 (Wan Series)**: 写实图像和摄影级视觉效果，Wan2.7 支持 4K 输出
-- **Z-Image**: 轻量快速、低成本；擅长高保真人像和商品图
-- **多种尺寸预设**: 1:1, 16:9, 9:16, 4:3, 3:4，以及 1K/2K/4K
+- **阿里云百炼 (DashScope)**: 通义千问 2.0、编辑版、万相系列、Z-Image — 共 19 个模型
+- **字节火山方舟**: 豆包 Seedream 系列 (5.0/4.5/4.0) — 3 个模型，最高 4K
+- **腾讯混元**: 混元生图 3.0 — 旗舰模型，复杂中文语义理解
+- **多种尺寸预设**: 1:1, 16:9, 9:16, 4:3, 3:4，以及 1K/2K/3K/4K
 - **跨平台**: 支持 Windows, macOS, Linux
-- **多区域 API**: 中国（默认）、新加坡、弗吉尼亚
+- **多区域 API**: 中国（默认）、新加坡、弗吉尼亚（DashScope）
 
 ## 安装技能
 
@@ -62,23 +60,36 @@ git clone https://github.com/Agents365-ai/imagenCN.git skills/imagenCN
 
 ```bash
 pip install dashscope requests
+
+# 可选：用于火山方舟（字节跳动）平台
+pip install 'volcengine-python-sdk[ark]'
 ```
 
 ### API 密钥
 
-从[阿里云百炼控制台](https://bailian.console.aliyun.com/)获取 API 密钥
-
 ```bash
+# 阿里云百炼 (DashScope)
 export DASHSCOPE_API_KEY="your_api_key"
+# 获取密钥: https://bailian.console.aliyun.com/
+
+# 字节火山方舟（可选）
+export ARK_API_KEY="your_api_key"
+# 获取密钥: https://console.volcengine.com/ark/region:ark+cn-beijing/apikey
+
+# 腾讯混元（可选）
+export HUNYUAN_API_KEY="your_api_key"
+# 获取密钥: https://console.cloud.tencent.com/tokenhub/apikey
 ```
 
 ### 可选环境变量
 
 ```bash
-# 设置默认模型（默认: qwen-image-2.0-pro）
-export DASHSCOPE_MODEL="wan2.7-image-pro"
+# 各平台默认模型
+export DASHSCOPE_MODEL="wan2.7-image-pro"       # DashScope 默认
+export ARK_MODEL="doubao-seedream-5-0-260128"   # 火山方舟默认
+export HUNYUAN_MODEL="hy-image-v3.0"            # 腾讯混元默认
 
-# 设置 API 端点（默认: cn）
+# 设置 API 端点（仅 DashScope，默认: cn）
 export DASHSCOPE_API_BASE="cn"  # 或 "sg", "us", 或完整 URL
 ```
 
@@ -99,22 +110,25 @@ export DASHSCOPE_API_BASE="cn"  # 或 "sg", "us", 或完整 URL
 
 ```bash
 # 基本用法（默认模型: qwen-image-2.0-pro，原生 2K）
-python ~/.claude/skills/imagenCN/scripts/generate_image.py "一只可爱的猫咪" output.png
+python scripts/generate_image.py "一只可爱的猫咪" output.png
 
-# 使用 Wan2.7 模型生成 4K 写实图像
-python ~/.claude/skills/imagenCN/scripts/generate_image.py --model wan2.7-image-pro --size 4K "山间日落" photo.png
+# 使用 Wan2.7 模型生成 4K 写实图像 (DashScope)
+python scripts/generate_image.py --model wan2.7-image-pro --size 4K "山间日落" photo.png
 
-# 自定义尺寸
-python ~/.claude/skills/imagenCN/scripts/generate_image.py --size 16:9 "宽屏风景" landscape.png
+# 火山方舟（字节跳动）— 需 ARK_API_KEY
+python scripts/generate_image.py --platform ark "时尚杂志封面风格人像" portrait.png
+
+# 腾讯混元 — 需 HUNYUAN_API_KEY
+python scripts/generate_image.py --platform hunyuan "月球上骑马的宇航员，电影级光影" scifi.png
 
 # 编辑已有图片（需 --image）
-python ~/.claude/skills/imagenCN/scripts/generate_image.py --model qwen-image-edit-max --image input.png "把背景换成海滩日落" edited.png
+python scripts/generate_image.py --model qwen-image-edit-max --image input.png "把背景换成海滩日落" edited.png
 
 # 使用负面提示词
-python ~/.claude/skills/imagenCN/scripts/generate_image.py --negative "模糊" "高质量人像" portrait.png
+python scripts/generate_image.py --negative "模糊" "高质量人像" portrait.png
 
-# 列出可用模型
-python ~/.claude/skills/imagenCN/scripts/generate_image.py --list-models
+# 列出三大平台全部模型
+python scripts/generate_image.py --list-models
 ```
 
 ## 模型
@@ -142,6 +156,10 @@ python ~/.claude/skills/imagenCN/scripts/generate_image.py --list-models
 | `wanx2.1-t2i-plus` | 专业级 |
 | `wanx2.0-t2i-turbo` | 早期版本 |
 | `z-image-turbo` | 轻量快速、低成本；人像和商品图 |
+| `doubao-seedream-5-0-260128` | 字节最新旗舰，最高 3K，PNG/JPEG，最强文字渲染 |
+| `doubao-seedream-4-5-251128` | 字节 Seedream 4.5，最高 4K |
+| `doubao-seedream-4-0-250828` | 字节 Seedream 4.0，高性价比 4K |
+| `hy-image-v3.0` | 腾讯混元旗舰，复杂中文语义理解，最高支持千字级 prompt |
 
 ## 尺寸预设
 
@@ -176,6 +194,21 @@ python ~/.claude/skills/imagenCN/scripts/generate_image.py --list-models
 - `4:3` → 1200×900
 - `3:4` → 900×1200
 - `2:1` → 1440×720
+
+**火山方舟 (Seedream):**
+- `1:1` → 2048×2048
+- `16:9` → 2848×1600
+- `9:16` → 1600×2848
+- `4:3` → 2304×1728
+- `3:4` → 1728×2304
+- `1K` / `2K` / `3K` / `4K`（取决于模型）
+
+**腾讯混元（冒号分隔格式）:**
+- `1:1` → 1024:1024
+- `16:9` → 1920:1080
+- `9:16` → 1080:1920
+- `4:3` → 1600:1200
+- `3:4` → 1200:1600
 
 ## API 端点
 

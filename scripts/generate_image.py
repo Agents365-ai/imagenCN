@@ -65,6 +65,31 @@ except ImportError:
     print("  pip install dashscope requests", file=sys.stderr)
     sys.exit(1)
 
+# Platform modules (lazy imports — SDK checked inside each generate function)
+try:
+    from volcano_ark import (  # noqa: E402
+        generate_with_ark, ARK_MODELS, ARK_SIZES,
+        resolve_ark_size, get_ark_api_key,
+    )
+except ImportError:
+    generate_with_ark = None  # type: ignore[assignment]
+    ARK_MODELS = set()
+    ARK_SIZES = {}
+    resolve_ark_size = None  # type: ignore[assignment]
+    get_ark_api_key = None  # type: ignore[assignment]
+
+try:
+    from hunyuan import (  # noqa: E402
+        generate_with_hunyuan, HUNYUAN_MODELS, HUNYUAN_SIZES,
+        resolve_hunyuan_size, get_hunyuan_api_key,
+    )
+except ImportError:
+    generate_with_hunyuan = None  # type: ignore[assignment]
+    HUNYUAN_MODELS = set()
+    HUNYUAN_SIZES = {}
+    resolve_hunyuan_size = None  # type: ignore[assignment]
+    get_hunyuan_api_key = None  # type: ignore[assignment]
+
 
 DEFAULT_MODEL = "qwen-image-2.0-pro"
 DEFAULT_SIZE = "2048*2048"
@@ -168,7 +193,37 @@ def get_api_base():
     return base
 
 
-def resolve_size(size_input, model):
+def detect_platform(model):
+    """Auto-detect platform from model name."""
+    if model is None:
+        return "dashscope"
+    if model in ARK_MODELS:
+        return "ark"
+    if model in HUNYUAN_MODELS:
+        return "hunyuan"
+    return "dashscope"
+
+
+def get_default_model_for_platform(platform):
+    """Return the default model for a given platform."""
+    if platform == "ark":
+        return os.environ.get("ARK_MODEL", "doubao-seedream-5-0-260128")
+    if platform == "hunyuan":
+        return os.environ.get("HUNYUAN_MODEL", "hy-image-v3.0")
+    return os.environ.get("DASHSCOPE_MODEL", DEFAULT_MODEL)
+
+
+def resolve_size(size_input, model, platform=None):
+    if platform is None:
+        platform = detect_platform(model)
+
+    # Platform-specific size resolution
+    if platform == "ark" and resolve_ark_size is not None:
+        return resolve_ark_size(size_input, model)
+    if platform == "hunyuan" and resolve_hunyuan_size is not None:
+        return resolve_hunyuan_size(size_input)
+
+    # DashScope size resolution (unchanged)
     if model in EDIT_MODELS:
         # No default: let the API match the input image dimensions
         if not size_input:
@@ -313,15 +368,27 @@ def list_models():
     for m in sorted(GENERATION_MODELS):
         default = " (default)" if m == DEFAULT_MODEL else ""
         print(f"  - {m}{default}")
+    print("\nVolcano Ark / ByteDance (Seedream) [OpenAI-compatible API]:")
+    for m in sorted(ARK_MODELS):
+        default = " (default)" if m == DEFAULT_MODEL else ""
+        print(f"  - {m}{default}")
+    print("\nTencent Hunyuan [OpenAI-compatible API]:")
+    for m in sorted(HUNYUAN_MODELS):
+        default = " (default)" if m == DEFAULT_MODEL else ""
+        print(f"  - {m}{default}")
     print("\nSize presets:")
     print("  Qwen-Image 2.0:", ", ".join(QWEN2_SIZES.keys()))
     print("  Z-Image:", ", ".join(ZIMAGE_SIZES.keys()))
     print("  Qwen-Image legacy:", ", ".join(QWEN_SIZES.keys()))
     print("  Wan Series:", ", ".join(WAN_SIZES.keys()))
+    print("  Volcano Ark:", ", ".join(ARK_SIZES.keys()) if ARK_SIZES else "N/A")
+    print("  Tencent Hunyuan:", ", ".join(HUNYUAN_SIZES.keys()) if HUNYUAN_SIZES else "N/A")
     print("\nAPI endpoints:")
     for region, url in API_ENDPOINTS.items():
         default = " (default)" if region == "cn" else ""
         print(f"  - {region}: {url}{default}")
+    print(f"  - Volcano Ark: https://ark.cn-beijing.volces.com/api/v3")
+    print(f"  - Tencent Hunyuan: https://tokenhub.tencentmaas.com/v1/images/generations")
 
 
 def main():
@@ -343,6 +410,18 @@ Examples:
     parser.add_argument("--size", "-s", help="Image size as ratio or pixels")
     parser.add_argument("--negative", "-n", help="Negative prompt")
     parser.add_argument("--image", "-i", help="Input image (path or URL) for editing models")
+    parser.add_argument("--guidance-scale", type=float, default=None,
+                        help="Guidance scale (Volcano Ark only)")
+    parser.add_argument("--logo", type=int, choices=[0, 1], default=None,
+                        help="Add AI logo: 0=no, 1=yes (Tencent Hunyuan only)")
+    parser.add_argument("--no-watermark", action="store_true",
+                        help="Disable watermark (Volcano Ark only)")
+    parser.add_argument("--platform", "-p", choices=["dashscope", "ark", "hunyuan"],
+                        help="Target platform (auto-detect from model name by default)")
+    parser.add_argument("--revise", type=int, choices=[0, 1], default=None,
+                        help="Auto-enhance prompt: 0=off 1=on (Tencent Hunyuan only)")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Random seed for reproducibility")
     parser.add_argument("--list-models", action="store_true", help="List available models")
     args = parser.parse_args()
 
@@ -354,73 +433,133 @@ Examples:
         parser.print_help()
         sys.exit(1)
 
-    api_key = get_api_key()
-    model = args.model or os.environ.get("DASHSCOPE_MODEL", DEFAULT_MODEL)
-    size = resolve_size(args.size, model)
     output_path = Path(args.output)
+    create_output_dir(output_path)
 
-    all_models = SYNTHESIS_MODELS | GENERATION_MODELS | MULTIMODAL_MODELS | ZIMAGE_MODELS | EDIT_MODELS
+    # Determine platform and model
+    if args.platform:
+        platform = args.platform
+        if args.model:
+            model = args.model
+        else:
+            model = get_default_model_for_platform(platform)
+    else:
+        model = args.model or os.environ.get("DASHSCOPE_MODEL", DEFAULT_MODEL)
+        platform = detect_platform(model)
+
+    all_models = (SYNTHESIS_MODELS | GENERATION_MODELS | MULTIMODAL_MODELS |
+                  ZIMAGE_MODELS | EDIT_MODELS | ARK_MODELS | HUNYUAN_MODELS)
+
+    # Validate model
     if model not in all_models:
-        print(f"Warning: Unknown model '{model}'. Using {DEFAULT_MODEL}", file=sys.stderr)
-        model = DEFAULT_MODEL
-        size = resolve_size(args.size, model)
+        print(f"Warning: Unknown model '{model}'. Using platform default", file=sys.stderr)
+        model = get_default_model_for_platform(platform)
+    elif args.platform:
+        # If platform is explicit, verify model belongs to it
+        platform_models = {
+            "ark": ARK_MODELS,
+            "hunyuan": HUNYUAN_MODELS,
+        }.get(args.platform)
+        if platform_models and model not in platform_models:
+            print(f"Warning: Model '{model}' is not a '{args.platform}' model. "
+                  f"Using platform default", file=sys.stderr)
+            model = get_default_model_for_platform(platform)
 
+    size = resolve_size(args.size, model, platform)
+
+    # Handle input image (DashScope edit models only)
     input_image = args.image
-    if model in EDIT_MODELS and not input_image:
+    if platform == "dashscope" and model in EDIT_MODELS and not input_image:
         print(f"Error: Model '{model}' is an editing model and requires --image", file=sys.stderr)
         sys.exit(1)
     if input_image and os.path.exists(input_image):
         input_image = f"file://{Path(input_image).resolve()}"
 
-    create_output_dir(output_path)
-    dashscope.base_http_api_url = get_api_base()
+    # Set API base for DashScope (needed before API calls)
+    if platform == "dashscope":
+        dashscope.base_http_api_url = get_api_base()
 
-    if model in SYNTHESIS_MODELS:
+    # Determine display info
+    if platform == "ark":
+        api_type = "Volcano Ark (OpenAI-compatible)"
+        endpoint = "https://ark.cn-beijing.volces.com/api/v3"
+    elif platform == "hunyuan":
+        api_type = "Tencent Hunyuan (OpenAI-compatible)"
+        endpoint = "https://tokenhub.tencentmaas.com/v1/images/generations"
+    elif model in SYNTHESIS_MODELS:
         api_type = "ImageSynthesis"
+        endpoint = dashscope.base_http_api_url
     elif model in MULTIMODAL_MODELS or model in ZIMAGE_MODELS or model in EDIT_MODELS:
         api_type = "MultiModalConversation"
+        endpoint = dashscope.base_http_api_url
     else:
         api_type = "ImageGeneration"
+        endpoint = dashscope.base_http_api_url
+
     print(f"Generating image...")
     print(f"Prompt: \"{args.prompt}\"")
+    print(f"Platform: {platform}")
     print(f"Model: {model} ({api_type})")
     if input_image:
         print(f"Input image: {args.image}")
     print(f"Size: {size or 'auto (match input image)'}")
-    print(f"Endpoint: {dashscope.base_http_api_url}")
+    print(f"Endpoint: {endpoint}")
     print(f"Output: {output_path}")
     print()
 
     try:
-        if model in SYNTHESIS_MODELS:
+        if platform == "ark":
+            ark_key = get_ark_api_key()
+            image_url = generate_with_ark(
+                ark_key, model, args.prompt, size,
+                seed=args.seed,
+                guidance_scale=args.guidance_scale,
+                no_watermark=args.no_watermark,
+            )
+        elif platform == "hunyuan":
+            hy_key = get_hunyuan_api_key()
+            image_url = generate_with_hunyuan(
+                hy_key, model, args.prompt, size,
+                seed=args.seed,
+                revise=args.revise,
+                logo_add=args.logo,
+            )
+        elif model in SYNTHESIS_MODELS:
+            api_key = get_api_key()
             rsp = generate_with_synthesis(api_key, model, args.prompt, size, args.negative)
         elif model in MULTIMODAL_MODELS or model in ZIMAGE_MODELS or model in EDIT_MODELS:
+            api_key = get_api_key()
             rsp = generate_with_multimodal(api_key, model, args.prompt, size, args.negative,
                                            image=input_image)
         else:
+            api_key = get_api_key()
             rsp = generate_with_generation(api_key, model, args.prompt, size, args.negative)
     except Exception as e:
         print(f"Error: API call failed: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Check response status
-    if hasattr(rsp, 'status_code') and rsp.status_code != HTTPStatus.OK:
-        print(f"Error: API returned {rsp.status_code}", file=sys.stderr)
-        if hasattr(rsp, 'code'):
-            print(f"Code: {rsp.code}", file=sys.stderr)
-        if hasattr(rsp, 'message'):
-            print(f"Message: {rsp.message}", file=sys.stderr)
-        sys.exit(1)
+    if platform in ("ark", "hunyuan"):
+        # URL returned directly from generation function
+        if not save_image(image_url, output_path):
+            sys.exit(1)
+    else:
+        # DashScope response handling (unchanged)
+        if hasattr(rsp, 'status_code') and rsp.status_code != HTTPStatus.OK:
+            print(f"Error: API returned {rsp.status_code}", file=sys.stderr)
+            if hasattr(rsp, 'code'):
+                print(f"Code: {rsp.code}", file=sys.stderr)
+            if hasattr(rsp, 'message'):
+                print(f"Message: {rsp.message}", file=sys.stderr)
+            sys.exit(1)
 
-    # Extract and save image
-    image_url = extract_image_url(rsp, model)
-    if not image_url:
-        print("Error: No image URL in response", file=sys.stderr)
-        print(f"Response: {rsp}", file=sys.stderr)
-        sys.exit(1)
+        image_url = extract_image_url(rsp, model)
+        if not image_url:
+            print("Error: No image URL in response", file=sys.stderr)
+            print(f"Response: {rsp}", file=sys.stderr)
+            sys.exit(1)
 
-    if not save_image(image_url, output_path):
-        sys.exit(1)
+        if not save_image(image_url, output_path):
+            sys.exit(1)
 
     if output_path.exists() and output_path.stat().st_size > 0:
         file_size = get_file_size(output_path)

@@ -14,12 +14,10 @@ metadata: {"openclaw":{"requires":{"bins":["python3"],"env":["DASHSCOPE_API_KEY"
 
 Generate images using Alibaba Cloud Bailian API. **Default endpoint is China region**.
 
-Supports five model families:
-- **Qwen-Image 2.0** (latest, native 2K): Flagship general-purpose generator with strong text rendering
-- **Qwen-Image Edit**: Instruction-based image editing (requires an input image)
-- **Qwen-Image legacy**: Lighter Chinese/English text rendering models
-- **Wan Series**: Photorealistic images and photography-grade visuals (Wan2.7 supports up to 4K)
-- **Z-Image**: Lightweight, fast and low-cost; strong at high-fidelity portraits and product shots
+Supports three platforms across seven model families:
+- **Alibaba Cloud Bailian** (DashScope): Qwen-Image 2.0, Qwen-Image Edit, Qwen-Image legacy, Wan Series, Z-Image
+- **ByteDance Volcano Ark**: Doubao-Seedream series (OpenAI-compatible SDK)
+- **Tencent Hunyuan**: Hunyuan Image 3.0 (OpenAI-compatible REST)
 
 **Cross-platform support**: Windows, macOS, Linux
 
@@ -29,7 +27,7 @@ Automatically activate this skill when:
 - User requests image generation with Chinese text or calligraphy
 - Need photorealistic images or photography-style visuals
 - Creating commercial posters, illustrations, or digital art
-- User explicitly requests Alibaba Cloud / Bailian / Qwen / Wan models
+- User mentions any of these: Alibaba Cloud / Bailian / Qwen / Wan / DashScope, ByteDance / Volcano Ark / Seedream / Doubao, Tencent / Hunyuan
 - Any task where AI-generated image with strong Chinese support would be helpful
 
 ## Workflow
@@ -88,6 +86,20 @@ Editing models require an input image via `--image` (local path or URL). Omit `-
 | Model | Description |
 |-------|-------------|
 | `z-image-turbo` | Fast, low-cost generation; bilingual (CN/EN) text rendering, high-fidelity portraits and product images. Pixel area 512x512 to 2048x2048 |
+
+### Volcano Ark - ByteDance Seedream (OpenAI-compatible API)
+
+| Model | Description |
+|-------|-------------|
+| `doubao-seedream-5-0-260128` | **Ark default**. Latest, up to 3K, PNG/JPEG output, best text rendering |
+| `doubao-seedream-4-5-251128` | Seedream 4.5, up to 4K |
+| `doubao-seedream-4-0-250828` | Seedream 4.0, up to 4K, budget-friendly |
+
+### Tencent Hunyuan (OpenAI-compatible API)
+
+| Model | Description |
+|-------|-------------|
+| `hy-image-v3.0` | **Hunyuan default**. Flagship 3.0, strong composition awareness, handles complex Chinese prompts up to 8K chars |
 
 ## Usage
 
@@ -149,6 +161,23 @@ python ~/.claude/skills/imagenCN/scripts/generate_image.py --size 1280*720 "Cust
 - `3:4` -> 900x1200
 - `2:1` -> 1440x720
 
+**Volcano Ark (Seedream):**
+- `1:1` -> 2048x2048
+- `16:9` -> 2848x1600
+- `9:16` -> 1600x2848
+- `4:3` -> 2304x1728
+- `3:4` -> 1728x2304
+- `3:2` -> 2496x1664
+- `2:3` -> 1664x2496
+- `1K` / `2K` / `3K` / `4K` (model-dependent max resolution)
+
+**Tencent Hunyuan (colon-separated format):**
+- `1:1` -> 1024:1024
+- `16:9` -> 1920:1080
+- `9:16` -> 1080:1920
+- `4:3` -> 1600:1200
+- `3:4` -> 1200:1600
+
 ### Advanced Options
 
 ```bash
@@ -163,22 +192,31 @@ python ~/.claude/skills/imagenCN/scripts/generate_image.py --list-models
 
 ```bash
 pip install dashscope requests
+# Optional: for Volcano Ark (ByteDance) platform
+pip install 'volcengine-python-sdk[ark]'
 ```
 
 ## Environment Variables
 
 ```bash
-# Required - Alibaba Cloud Bailian API Key
-export DASHSCOPE_API_KEY="your_api_key"
+# Alibaba Cloud Bailian (DashScope)
+export DASHSCOPE_API_KEY="your_api_key"        # Required
+export DASHSCOPE_MODEL="wan2.7-image-pro"       # Optional default model
+export DASHSCOPE_API_BASE="cn"                  # Optional: cn, sg, us
 
-# Optional - Set default model
-export DASHSCOPE_MODEL="wan2.7-image-pro"
+# ByteDance Volcano Ark
+export ARK_API_KEY="your_api_key"               # Required for Ark
+export ARK_MODEL="doubao-seedream-5-0-260128"   # Optional default model
 
-# Optional - Set API endpoint (default: China)
-export DASHSCOPE_API_BASE="cn"  # or full URL
+# Tencent Hunyuan (TokenHub)
+export HUNYUAN_API_KEY="your_api_key"           # Required for Hunyuan
+export HUNYUAN_MODEL="hy-image-v3.0"            # Optional default model
 ```
 
-Get API Key: https://bailian.console.aliyun.com/
+Get API Keys:
+- DashScope: https://bailian.console.aliyun.com/
+- Volcano Ark: https://console.volcengine.com/ark/region:ark+cn-beijing/apikey
+- Tencent Hunyuan: https://console.cloud.tencent.com/tokenhub/apikey
 
 ## API Endpoints
 
@@ -198,6 +236,21 @@ export DASHSCOPE_API_BASE="https://dashscope-intl.aliyuncs.com/api/v1"
 
 ## Model Selection Guide
 
+### Quick Pick — You Only Need Six
+
+| What you want | Model | Platform |
+|---------------|-------|----------|
+| **Default / general** (posters, text, daily use) | `qwen-image-2.0-pro` | DashScope |
+| **Photorealistic** (portraits, landscapes, products) | `wan2.7-image-pro` | DashScope |
+| **Edit an image** (swap backgrounds, restyle) | `qwen-image-edit-max` | DashScope |
+| **Cheap & fast** (quick drafts, high volume) | `z-image-turbo` | DashScope |
+| **Best text + photography combo** | `doubao-seedream-5-0-260128` | Volcano Ark |
+| **Complex Chinese composition** | `hy-image-v3.0` | Tencent Hunyuan |
+
+All other models are legacy/snapshot variants. You don't need them unless you have a specific reason.
+
+### Full Reference
+
 | Use Case | Recommended Model |
 |----------|-------------------|
 | General high-quality (default) | `qwen-image-2.0-pro` |
@@ -213,6 +266,19 @@ export DASHSCOPE_API_BASE="https://dashscope-intl.aliyuncs.com/api/v1"
 | High-fidelity portraits / product shots (fast) | `z-image-turbo` |
 | Fast photorealistic (Wan) | `wan2.2-t2i-flash` |
 | Lower-cost text rendering | `qwen-image-plus` |
+| ByteDance best quality | `doubao-seedream-5-0-260128` |
+| Budget-friendly 4K (ByteDance) | `doubao-seedream-4-0-250828` |
+| Complex Chinese prompts (Tencent) | `hy-image-v3.0` |
+
+## Platform Quick Comparison
+
+| Feature | DashScope (Bailian) | Volcano Ark | Tencent Hunyuan |
+|---------|---------------------|-------------|-----------------|
+| Best for | Text rendering, model variety | Photo + text combo | Complex Chinese composition |
+| Max resolution | 4K (Wan2.7) | 4K (Seedream 4.0/4.5) | 2K |
+| SDK required | `dashscope` | `volcenginesdkarkruntime` | None (REST) |
+| Pricing | Varies per model | ~0.22 RMB/image | ~0.20 RMB/image |
+| Env var | `DASHSCOPE_API_KEY` | `ARK_API_KEY` | `HUNYUAN_API_KEY` |
 
 ## Comparison with Imagen (Gemini)
 
@@ -227,7 +293,37 @@ export DASHSCOPE_API_BASE="https://dashscope-intl.aliyuncs.com/api/v1"
 
 ## Examples
 
-### Chinese New Year Poster
+### Volcano Ark (ByteDance)
+```bash
+# Default Ark model (Seedream 5.0)
+ARK_API_KEY="xxx" python scripts/generate_image.py \
+  --platform ark \
+  "A vibrant close-up editorial portrait, Vogue magazine cover style" \
+  portrait.png
+
+# With 4K output
+ARK_API_KEY="xxx" python scripts/generate_image.py \
+  --platform ark --model doubao-seedream-4-5-251128 --size 4K \
+  "Breathtaking mountain sunset, golden hour, professional photography" \
+  landscape.png
+```
+
+### Tencent Hunyuan
+```bash
+# Default Hunyuan model (Image 3.0)
+HUNYUAN_API_KEY="xxx" python scripts/generate_image.py \
+  --platform hunyuan \
+  "An astronaut riding a horse on the moon, cinematic lighting, 8K detail" \
+  scifi.png
+
+# With prompt auto-enhance disabled
+HUNYUAN_API_KEY="xxx" python scripts/generate_image.py \
+  --platform hunyuan --revise 0 \
+  "A cute orange cat napping in sunlight, oil painting style" \
+  cat.png
+```
+
+### Chinese New Year Poster (DashScope)
 ```bash
 python ~/.claude/skills/imagenCN/scripts/generate_image.py \
   "A beautiful Chinese New Year poster with red background, golden text, fireworks and firecrackers" \
