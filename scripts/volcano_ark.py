@@ -1,8 +1,7 @@
 """
 Volcano Ark (ByteDance) Image Generation Module
 
-Uses the volcenginesdkarkruntime SDK (OpenAI-compatible) to call
-Doubao-Seedream models via the Volcano Ark API.
+Uses the OpenAI-compatible REST API to call Doubao-Seedream models.
 
 Env vars:
     ARK_API_KEY (required) - Volcano Ark API key
@@ -12,12 +11,19 @@ Models:
     doubao-seedream-5-0-260128  Seedream 5.0  (latest, 2K/3K, PNG/JPEG)
     doubao-seedream-4-5-251128  Seedream 4.5  (2K/4K)
     doubao-seedream-4-0-250828  Seedream 4.0  (1K/2K/4K)
+
+API endpoint: https://ark.cn-beijing.volces.com/api/v3/images/generations
 """
 
 import os
 import sys
 
-ARK_API_BASE = "https://ark.cn-beijing.volces.com/api/v3"
+try:
+    import requests
+except ImportError:
+    requests = None  # handled lazily in generate_with_ark
+
+ARK_API_BASE = "https://ark.cn-beijing.volces.com/api/v3/images/generations"
 
 ARK_MODELS = {
     "doubao-seedream-5-0-260128",
@@ -72,22 +78,18 @@ def resolve_ark_size(size_input, model=None):
 
 def generate_with_ark(api_key, model, prompt, size, seed=None,
                       guidance_scale=None, no_watermark=False):
-    """Generate an image via Volcano Ark and return the image URL.
-
-    The volcenginesdkarkruntime import is lazy so that --list-models
-    and other platforms work without the Ark SDK installed.
-    """
-    try:
-        from volcenginesdkarkruntime import Ark  # noqa: E501
-    except ImportError:
-        print("Error: volcenginesdkarkruntime not installed", file=sys.stderr)
-        print("\nInstall with:", file=sys.stderr)
-        print("  pip install 'volcengine-python-sdk[ark]'", file=sys.stderr)
+    """Generate an image via Volcano Ark REST API and return the image URL."""
+    if requests is None:
+        print("Error: 'requests' package not installed", file=sys.stderr)
+        print("\nInstall with:  pip install requests", file=sys.stderr)
         sys.exit(1)
 
-    client = Ark(base_url=ARK_API_BASE, api_key=api_key)
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
 
-    params = {
+    body = {
         "model": model,
         "prompt": prompt,
         "size": size,
@@ -95,9 +97,26 @@ def generate_with_ark(api_key, model, prompt, size, seed=None,
         "watermark": not no_watermark,
     }
     if seed is not None:
-        params["seed"] = seed
+        body["seed"] = seed
     if guidance_scale is not None:
-        params["guidance_scale"] = guidance_scale
+        body["guidance_scale"] = guidance_scale
 
-    response = client.images.generate(**params)
-    return response.data[0].url
+    try:
+        response = requests.post(ARK_API_BASE, headers=headers, json=body,
+                                 timeout=120)
+    except requests.exceptions.RequestException as e:
+        print(f"Error: Ark API request failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if response.status_code != 200:
+        print(f"Error: Ark API returned {response.status_code}", file=sys.stderr)
+        print(f"Response: {response.text}", file=sys.stderr)
+        sys.exit(1)
+
+    data = response.json()
+    try:
+        return data["data"][0]["url"]
+    except (KeyError, IndexError, TypeError):
+        print("Error: Unexpected response format from Ark API", file=sys.stderr)
+        print(f"Response: {data}", file=sys.stderr)
+        sys.exit(1)

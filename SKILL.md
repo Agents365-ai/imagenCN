@@ -192,8 +192,6 @@ python ~/.claude/skills/imagenCN/scripts/generate_image.py --list-models
 
 ```bash
 pip install dashscope requests
-# Optional: for Volcano Ark (ByteDance) platform
-pip install 'volcengine-python-sdk[ark]'
 ```
 
 ## Environment Variables
@@ -276,7 +274,7 @@ All other models are legacy/snapshot variants. You don't need them unless you ha
 |---------|---------------------|-------------|-----------------|
 | Best for | Text rendering, model variety | Photo + text combo | Complex Chinese composition |
 | Max resolution | 4K (Wan2.7) | 4K (Seedream 4.0/4.5) | 2K |
-| SDK required | `dashscope` | `volcenginesdkarkruntime` | None (REST) |
+| SDK required | `dashscope` | None (REST) | None (REST) |
 | Pricing | Varies per model | ~0.22 RMB/image | ~0.20 RMB/image |
 | Env var | `DASHSCOPE_API_KEY` | `ARK_API_KEY` | `HUNYUAN_API_KEY` |
 

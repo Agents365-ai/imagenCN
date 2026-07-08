@@ -60,9 +60,6 @@ git clone https://github.com/Agents365-ai/imagenCN.git skills/imagenCN
 
 ```bash
 pip install dashscope requests
-
-# 可选：用于火山方舟（字节跳动）平台
-pip install 'volcengine-python-sdk[ark]'
 ```
 
 ### API 密钥

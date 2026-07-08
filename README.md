@@ -62,9 +62,6 @@ git clone https://github.com/Agents365-ai/imagenCN.git skills/imagenCN
 
 ```bash
 pip install dashscope requests
-
-# Optional: for Volcano Ark (ByteDance) platform
-pip install 'volcengine-python-sdk[ark]'
 ```
 
 ### API Keys

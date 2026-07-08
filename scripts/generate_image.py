@@ -482,7 +482,7 @@ Examples:
     # Determine display info
     if platform == "ark":
         api_type = "Volcano Ark (OpenAI-compatible)"
-        endpoint = "https://ark.cn-beijing.volces.com/api/v3"
+        endpoint = "https://ark.cn-beijing.volces.com/api/v3/images/generations"
     elif platform == "hunyuan":
         api_type = "Tencent Hunyuan (OpenAI-compatible)"
         endpoint = "https://tokenhub.tencentmaas.com/v1/images/generations"
