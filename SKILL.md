@@ -37,8 +37,8 @@ Automatically activate this skill when:
 ### Step 1 — Refine the prompt (interactive, never skip)
 
 Users often give short, casual descriptions ("生成一只猫").  Before calling the
-API, expand the prompt and **show it to the user for confirmation**.  Add, as
-appropriate:
+API, **present 3 refined prompt options** with different style directions.
+Add, as appropriate:
 
 - Subject details (shape, colour, material, expression, pose)
 - Lighting (golden hour, studio, rim light, soft diffused, neon, cinematic)
@@ -48,9 +48,10 @@ appropriate:
 - Quality keywords (8K, hyperdetailed, award-winning, professional photography)
 - For Chinese text on images: text content, placement, font style, colour, size
 
-**Show the refined prompt** to the user and ask if they are happy with it.
-Encourage them to tweak wording, add/remove details, or try a different style.
-Iterate until they confirm, then proceed to generation.
+Label the options clearly (e.g. A / B / C) with a one-line summary of each
+direction.  Let the user pick one, combine elements from multiple, or request
+a new direction.  Iterate until they confirm ("go", "generate", "ok", etc.),
+then proceed to generation.
 
 ### Step 2 — Pick a model
 
