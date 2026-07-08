@@ -34,22 +34,41 @@ Automatically activate this skill when:
 
 ## Workflow
 
-1. **Refine the prompt** (critical — never skip).  Users often give short, casual
-   descriptions.  Expand them into a detailed, high-quality prompt before calling the
-   API.  Add, as appropriate:
-   - Subject details (shape, colour, material, expression, pose)
-   - Lighting (golden hour, studio, rim light, soft diffused, neon, cinematic)
-   - Composition (rule of thirds, shallow depth of field, wide shot, close-up)
-   - Style / medium (photorealistic, oil painting, watercolour, 3D render, vector)
-   - Mood / atmosphere (serene, dramatic, whimsical, dystopian, elegant)
-   - Quality keywords (8K, hyperdetailed, award-winning, professional photography)
-   - For Chinese text on images: describe the text content, placement, font style
-     (e.g. calligraphy, sans-serif, bold), colour, and size
+### Step 1 — Refine the prompt (interactive, never skip)
 
-2. Pick a model based on the request (see Model Selection Guide below). Default to `qwen-image-2.0-pro` if unsure.
-3. Pick a size: native 2K for the Qwen-Image 2.0 family, `1K`/`2K`/`4K` for Wan2.7, or an aspect-ratio preset (`16:9`, `1:1`, etc.).
-4. Run `scripts/generate_image.py` with the refined prompt and output path.
-5. If the output path was implicit, save into the user's current working directory.
+Users often give short, casual descriptions ("生成一只猫").  Before calling the
+API, expand the prompt and **show it to the user for confirmation**.  Add, as
+appropriate:
+
+- Subject details (shape, colour, material, expression, pose)
+- Lighting (golden hour, studio, rim light, soft diffused, neon, cinematic)
+- Composition (rule of thirds, shallow depth of field, wide shot, close-up)
+- Style / medium (photorealistic, oil painting, watercolour, 3D render, vector)
+- Mood / atmosphere (serene, dramatic, whimsical, dystopian, elegant)
+- Quality keywords (8K, hyperdetailed, award-winning, professional photography)
+- For Chinese text on images: text content, placement, font style, colour, size
+
+**Show the refined prompt** to the user and ask if they are happy with it.
+Encourage them to tweak wording, add/remove details, or try a different style.
+Iterate until they confirm, then proceed to generation.
+
+### Step 2 — Pick a model
+
+Choose based on the request (see Model Selection Guide below). Default to
+`qwen-image-2.0-pro` if unsure.  Mention your choice to the user.
+
+### Step 3 — Pick a size
+
+Native 2K for Qwen-Image 2.0, `1K`/`2K`/`4K` for Wan2.7, or an aspect-ratio
+preset (`16:9`, `1:1`, etc.).
+
+### Step 4 — Generate
+
+Run `scripts/generate_image.py` with the confirmed prompt and output path.
+
+### Step 5 — Save
+
+If the output path was implicit, save into the user's current working directory.
 
 ## Models
 
