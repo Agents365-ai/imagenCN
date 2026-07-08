@@ -78,6 +78,16 @@ export HUNYUAN_API_KEY="your_api_key"
 # 获取密钥: https://console.cloud.tencent.com/tokenhub/apikey
 ```
 
+### 配置文件（可选）
+
+创建 `~/.imagenCN.json` 设置个人默认值：
+
+```json
+{"platform": "ark", "model": "doubao-seedream-5-0-260128", "size": "2K"}
+```
+
+项目级 `.imagenCN.json` 优先级高于用户级。命令行参数覆盖两者。
+
 ### 可选环境变量
 
 ```bash

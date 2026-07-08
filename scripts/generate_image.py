@@ -49,6 +49,7 @@ Models:
 """
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -64,6 +65,33 @@ except ImportError:
     print("\nInstall with:", file=sys.stderr)
     print("  pip install dashscope requests", file=sys.stderr)
     sys.exit(1)
+
+# Rich output (optional, falls back to plain text)
+try:
+    from rich.console import Console
+    from rich.table import Table
+    console = Console()
+    _HAS_RICH = True
+except ImportError:
+    console = None
+    _HAS_RICH = False
+
+
+def _out(msg, **kwargs):
+    """Print to stdout, using rich if available."""
+    if _HAS_RICH:
+        console.print(msg, **kwargs)
+    else:
+        print(msg)
+
+
+def _err(msg):
+    """Print to stderr, using rich if available."""
+    if _HAS_RICH:
+        console.print(msg, stderr=True)
+    else:
+        print(msg, file=sys.stderr)
+
 
 # Platform modules (lazy imports — SDK checked inside each generate function)
 try:
@@ -191,6 +219,30 @@ def get_api_base():
     if base in API_ENDPOINTS:
         return API_ENDPOINTS[base]
     return base
+
+
+def load_config():
+    """Load defaults from config files.
+
+    Priority (highest last): project .imagenCN.json > user ~/.imagenCN.json.
+    Returns a dict with optional keys: platform, model, size.
+    """
+    config = {}
+    # User-level (lower priority, loaded first)
+    user_config = Path.home() / ".imagenCN.json"
+    if user_config.exists():
+        try:
+            config.update(json.loads(user_config.read_text()))
+        except (json.JSONDecodeError, ValueError):
+            pass
+    # Project-level (higher priority, overrides user)
+    project_config = Path(".imagenCN.json")
+    if project_config.exists():
+        try:
+            config.update(json.loads(project_config.read_text()))
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return config
 
 
 def detect_platform(model):
@@ -436,36 +488,44 @@ Examples:
     output_path = Path(args.output)
     create_output_dir(output_path)
 
-    # Determine platform and model
+    # Load config file (CLI args take precedence over config)
+    config = load_config()
+    config_platform = config.get("platform")
+    config_model = config.get("model")
+    config_size_arg = config.get("size")
+
+    # Determine platform and model (CLI > config > env > default)
     if args.platform:
         platform = args.platform
         if args.model:
             model = args.model
         else:
-            model = get_default_model_for_platform(platform)
+            model = config_model or get_default_model_for_platform(platform)
     else:
-        model = args.model or os.environ.get("DASHSCOPE_MODEL", DEFAULT_MODEL)
-        platform = detect_platform(model)
+        model = (args.model or config_model or
+                 os.environ.get("DASHSCOPE_MODEL", DEFAULT_MODEL))
+        platform = config_platform or detect_platform(model)
 
     all_models = (SYNTHESIS_MODELS | GENERATION_MODELS | MULTIMODAL_MODELS |
                   ZIMAGE_MODELS | EDIT_MODELS | ARK_MODELS | HUNYUAN_MODELS)
 
     # Validate model
     if model not in all_models:
-        print(f"Warning: Unknown model '{model}'. Using platform default", file=sys.stderr)
+        _err(f"[yellow]Warning:[/] Unknown model '{model}'. Using platform default")
         model = get_default_model_for_platform(platform)
-    elif args.platform:
-        # If platform is explicit, verify model belongs to it
+    elif args.platform or config_platform:
+        # If platform is explicit (CLI or config), verify model belongs to it
+        effective_platform = args.platform or config_platform
         platform_models = {
             "ark": ARK_MODELS,
             "hunyuan": HUNYUAN_MODELS,
-        }.get(args.platform)
+        }.get(effective_platform)
         if platform_models and model not in platform_models:
-            print(f"Warning: Model '{model}' is not a '{args.platform}' model. "
-                  f"Using platform default", file=sys.stderr)
+            _err(f"[yellow]Warning:[/] Model '{model}' is not a "
+                  f"'{effective_platform}' model. Using platform default")
             model = get_default_model_for_platform(platform)
 
-    size = resolve_size(args.size, model, platform)
+    size = resolve_size(args.size or config_size_arg, model, platform)
 
     # Handle input image (DashScope edit models only)
     input_image = args.image
@@ -496,16 +556,32 @@ Examples:
         api_type = "ImageGeneration"
         endpoint = dashscope.base_http_api_url
 
-    print(f"Generating image...")
-    print(f"Prompt: \"{args.prompt}\"")
-    print(f"Platform: {platform}")
-    print(f"Model: {model} ({api_type})")
-    if input_image:
-        print(f"Input image: {args.image}")
-    print(f"Size: {size or 'auto (match input image)'}")
-    print(f"Endpoint: {endpoint}")
-    print(f"Output: {output_path}")
-    print()
+    if _HAS_RICH:
+        table = Table(show_header=False, box=None, padding=(0, 1))
+        table.add_column(style="bold cyan", justify="right")
+        table.add_column(style="white")
+        table.add_row("Prompt", f'"{args.prompt}"')
+        table.add_row("Platform", platform)
+        table.add_row("Model", f"{model} ([dim]{api_type}[/])")
+        if input_image:
+            table.add_row("Input", str(args.image))
+        table.add_row("Size", size or "auto (match input image)")
+        table.add_row("Endpoint", endpoint)
+        table.add_row("Output", str(output_path))
+        console.print()
+        console.print(table)
+        console.print()
+    else:
+        print(f"Generating image...")
+        print(f"Prompt: \"{args.prompt}\"")
+        print(f"Platform: {platform}")
+        print(f"Model: {model} ({api_type})")
+        if input_image:
+            print(f"Input image: {args.image}")
+        print(f"Size: {size or 'auto (match input image)'}")
+        print(f"Endpoint: {endpoint}")
+        print(f"Output: {output_path}")
+        print()
 
     try:
         if platform == "ark":
@@ -535,7 +611,7 @@ Examples:
             api_key = get_api_key()
             rsp = generate_with_generation(api_key, model, args.prompt, size, args.negative)
     except Exception as e:
-        print(f"Error: API call failed: {e}", file=sys.stderr)
+        _err(f"[bold red]Error:[/] API call failed: {e}")
         sys.exit(1)
 
     if platform in ("ark", "hunyuan"):
@@ -543,19 +619,19 @@ Examples:
         if not save_image(image_url, output_path):
             sys.exit(1)
     else:
-        # DashScope response handling (unchanged)
+        # DashScope response handling
         if hasattr(rsp, 'status_code') and rsp.status_code != HTTPStatus.OK:
-            print(f"Error: API returned {rsp.status_code}", file=sys.stderr)
+            _err(f"[bold red]Error:[/] API returned {rsp.status_code}")
             if hasattr(rsp, 'code'):
-                print(f"Code: {rsp.code}", file=sys.stderr)
+                _err(f"Code: {rsp.code}")
             if hasattr(rsp, 'message'):
-                print(f"Message: {rsp.message}", file=sys.stderr)
+                _err(f"Message: {rsp.message}")
             sys.exit(1)
 
         image_url = extract_image_url(rsp, model)
         if not image_url:
-            print("Error: No image URL in response", file=sys.stderr)
-            print(f"Response: {rsp}", file=sys.stderr)
+            _err("[bold red]Error:[/] No image URL in response")
+            _err(f"Response: {rsp}")
             sys.exit(1)
 
         if not save_image(image_url, output_path):
@@ -563,11 +639,15 @@ Examples:
 
     if output_path.exists() and output_path.stat().st_size > 0:
         file_size = get_file_size(output_path)
-        print("Success! Image generated and saved.")
-        print(f"File: {output_path}")
-        print(f"Size: {file_size}")
+        if _HAS_RICH:
+            _out(f"[bold green]✓[/] Image generated and saved  "
+                 f"[dim]{output_path} ({file_size})[/]")
+        else:
+            print("Success! Image generated and saved.")
+            print(f"File: {output_path}")
+            print(f"Size: {file_size}")
     else:
-        print(f"Error: Failed to save image to {output_path}", file=sys.stderr)
+        _err(f"[bold red]Error:[/] Failed to save image to {output_path}")
         sys.exit(1)
 
 

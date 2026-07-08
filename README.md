@@ -80,6 +80,16 @@ export HUNYUAN_API_KEY="your_api_key"
 # Get key: https://console.cloud.tencent.com/tokenhub/apikey
 ```
 
+### Config File (Optional)
+
+Create `~/.imagenCN.json` for personal defaults:
+
+```json
+{"platform": "ark", "model": "doubao-seedream-5-0-260128", "size": "2K"}
+```
+
+Project-level `.imagenCN.json` overrides user-level. CLI args override both.
+
 ### Optional Environment Variables
 
 ```bash
