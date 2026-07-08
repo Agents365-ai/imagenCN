@@ -16,7 +16,7 @@ Generate images using Alibaba Cloud Bailian API. **Default endpoint is China reg
 
 Supports three platforms across seven model families:
 - **Alibaba Cloud Bailian** (DashScope): Qwen-Image 2.0, Qwen-Image Edit, Qwen-Image legacy, Wan Series, Z-Image
-- **ByteDance Volcano Ark**: Doubao-Seedream series (OpenAI-compatible SDK)
+- **ByteDance Volcano Ark**: Doubao-Seedream series (OpenAI-compatible REST)
 - **Tencent Hunyuan**: Hunyuan Image 3.0 (OpenAI-compatible REST)
 
 **Cross-platform support**: Windows, macOS, Linux
