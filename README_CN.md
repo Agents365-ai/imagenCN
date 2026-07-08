@@ -76,6 +76,14 @@ export ARK_API_KEY="your_api_key"
 # 腾讯混元（可选）
 export HUNYUAN_API_KEY="your_api_key"
 # 获取密钥: https://console.cloud.tencent.com/tokenhub/apikey
+
+# 智谱 / BigModel（可选）
+export ZHIPUAI_API_KEY="your_api_key"
+# 获取密钥: https://bigmodel.cn
+
+# 阶跃星辰（可选）
+export STEP_API_KEY="your_api_key"
+# 获取密钥: https://platform.stepfun.com/interface-key
 ```
 
 ### 配置文件（可选）
@@ -167,6 +175,10 @@ python scripts/generate_image.py --list-models
 | `doubao-seedream-4-5-251128` | 字节 Seedream 4.5，最高 4K |
 | `doubao-seedream-4-0-250828` | 字节 Seedream 4.0，高性价比 4K |
 | `hy-image-v3.0` | 腾讯混元旗舰，复杂中文语义理解，最高支持千字级 prompt |
+| `cogview-4` | 智谱 CogView-4，图片中直接渲染中文文字 |
+| `glm-image` | 智谱 GLM-Image 旗舰，最高 2048×2048 |
+| `step-2x-large` | 阶跃星辰 Step-2X 高品质，0.1 元/张 |
+| `step-image-edit-2` | 阶跃星辰超低价，0.02 元/张，支持负面提示词 |
 
 ## 尺寸预设
 

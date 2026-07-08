@@ -78,6 +78,14 @@ export ARK_API_KEY="your_api_key"
 # Tencent Hunyuan (optional)
 export HUNYUAN_API_KEY="your_api_key"
 # Get key: https://console.cloud.tencent.com/tokenhub/apikey
+
+# Zhipu / BigModel (optional)
+export ZHIPUAI_API_KEY="your_api_key"
+# Get key: https://bigmodel.cn
+
+# StepFun / 阶跃星辰 (optional)
+export STEP_API_KEY="your_api_key"
+# Get key: https://platform.stepfun.com/interface-key
 ```
 
 ### Config File (Optional)
@@ -169,6 +177,10 @@ python scripts/generate_image.py --list-models
 | `doubao-seedream-4-5-251128` | ByteDance Seedream 4.5, up to 4K |
 | `doubao-seedream-4-0-250828` | ByteDance Seedream 4.0, budget-friendly 4K |
 | `hy-image-v3.0` | Tencent Hunyuan flagship, strong Chinese composition understanding |
+| `cogview-4` | Zhipu CogView-4, native Chinese text in images |
+| `glm-image` | Zhipu GLM-Image flagship, up to 2048×2048 |
+| `step-2x-large` | StepFun high quality, 0.1 RMB/image |
+| `step-image-edit-2` | StepFun ultra-cheap, 0.02 RMB/image, negative prompt support |
 
 ## Size Presets
 
