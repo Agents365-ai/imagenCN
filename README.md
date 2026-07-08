@@ -4,7 +4,7 @@
 
 A Claude Code / OpenClaw skill for AI image generation using Alibaba Cloud Bailian, ByteDance Volcano Ark, Tencent Hunyuan, Zhipu BigModel, and StepFun APIs.
 
-📋 **[Model Reference](docs/models.html)** — browse all 30 models with pricing, resolution, and feature comparison.
+📋 **[Model Reference](https://agents365-ai.github.io/imagenCN/docs/models.html)** — browse all 30 models with pricing, resolution, and feature comparison.
 
 ## Why This Skill?
 
