@@ -14,6 +14,7 @@ Models:
 API endpoint: https://tokenhub.tencentmaas.com/v1/images/generations
 """
 
+import json
 import os
 import sys
 
@@ -104,14 +105,25 @@ def generate_with_hunyuan(api_key, model, prompt, size, seed=None,
         sys.exit(1)
 
     if response.status_code != 200:
-        print(f"Error: Hunyuan API returned {response.status_code}", file=sys.stderr)
-        print(f"Response: {response.text}", file=sys.stderr)
+        _format_hunyuan_error(response)
         sys.exit(1)
 
     data = response.json()
     try:
         return data["data"][0]["url"]
     except (KeyError, IndexError, TypeError):
-        print("Error: Unexpected response format from Hunyuan API", file=sys.stderr)
-        print(f"Response: {data}", file=sys.stderr)
+        _format_hunyuan_error(response)
         sys.exit(1)
+
+
+def _format_hunyuan_error(response):
+    """Print a human-readable error from a Hunyuan API response."""
+    try:
+        err = response.json()
+        msg = err.get("error", {}).get("message", "") or response.text
+        print(f"Error: Hunyuan API returned {response.status_code}: {msg}",
+              file=sys.stderr)
+    except (json.JSONDecodeError, ValueError, AttributeError):
+        print(f"Error: Hunyuan API returned {response.status_code}",
+              file=sys.stderr)
+        print(f"Response: {response.text}", file=sys.stderr)

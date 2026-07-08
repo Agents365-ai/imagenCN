@@ -51,7 +51,9 @@ Models:
 import argparse
 import json
 import os
+import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from http import HTTPStatus
 
@@ -71,9 +73,11 @@ try:
     from rich.console import Console
     from rich.table import Table
     console = Console()
+    err_console = Console(stderr=True)
     _HAS_RICH = True
 except ImportError:
     console = None
+    err_console = None
     _HAS_RICH = False
 
 
@@ -88,7 +92,7 @@ def _out(msg, **kwargs):
 def _err(msg):
     """Print to stderr, using rich if available."""
     if _HAS_RICH:
-        console.print(msg, stderr=True)
+        err_console.print(msg)
     else:
         print(msg, file=sys.stderr)
 
@@ -302,6 +306,14 @@ def resolve_size(size_input, model, platform=None):
     return size_input
 
 
+def make_output_name(platform, model):
+    """Generate a descriptive output filename: platform-model-timestamp.png."""
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    safe_model = re.sub(r"[^a-zA-Z0-9._-]", "-", model)
+    safe_model = safe_model.strip("-")
+    return f"{platform}-{safe_model}-{ts}.png"
+
+
 def create_output_dir(output_path):
     output_dir = output_path.parent
     if output_dir and not output_dir.exists():
@@ -443,6 +455,32 @@ def list_models():
     print(f"  - Tencent Hunyuan: https://tokenhub.tencentmaas.com/v1/images/generations")
 
 
+def _validate_size(model, size):
+    """Warn if the requested size exceeds known per-model limits."""
+    if not size:
+        return
+    # Ark: Seedream 5.0 does not support 4K
+    if model == "doubao-seedream-5-0-260128" and size == "4K":
+        _err("[yellow]Warning:[/] Seedream 5.0 max resolution is 3K "
+              "(4K requested).  Use --model doubao-seedream-4-5-251128 for 4K."
+              if _HAS_RICH else
+              "Warning: Seedream 5.0 max is 3K (4K requested). "
+              "Use doubao-seedream-4-5-251128 for 4K.")
+    # Hunyuan: max 2048 on either side
+    if model in HUNYUAN_MODELS and (":" in size):
+        parts = size.split(":")
+        try:
+            w, h = int(parts[0]), int(parts[1])
+            if w > 2048 or h > 2048:
+                _err("[yellow]Warning:[/] Hunyuan max resolution is 2048px "
+                      f"per side (requested {size})."
+                      if _HAS_RICH else
+                      f"Warning: Hunyuan max is 2048px per side "
+                      f"(requested {size}).")
+        except (ValueError, IndexError):
+            pass
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate images using Alibaba Cloud Bailian API",
@@ -456,8 +494,8 @@ Examples:
         """
     )
     parser.add_argument("prompt", nargs="?", help="Text description of the image")
-    parser.add_argument("output", nargs="?", default="./generated-image.png",
-                        help="Output file path (default: ./generated-image.png)")
+    parser.add_argument("output", nargs="?", default=None,
+                        help="Output file path (default: auto-named)")
     parser.add_argument("--model", "-m", help=f"Model to use (default: {DEFAULT_MODEL})")
     parser.add_argument("--size", "-s", help="Image size as ratio or pixels")
     parser.add_argument("--negative", "-n", help="Negative prompt")
@@ -474,6 +512,8 @@ Examples:
                         help="Auto-enhance prompt: 0=off 1=on (Tencent Hunyuan only)")
     parser.add_argument("--seed", type=int, default=None,
                         help="Random seed for reproducibility")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Preview without generating (show what would be called)")
     parser.add_argument("--list-models", action="store_true", help="List available models")
     args = parser.parse_args()
 
@@ -484,9 +524,6 @@ Examples:
     if not args.prompt:
         parser.print_help()
         sys.exit(1)
-
-    output_path = Path(args.output)
-    create_output_dir(output_path)
 
     # Load config file (CLI args take precedence over config)
     config = load_config()
@@ -526,6 +563,16 @@ Examples:
             model = get_default_model_for_platform(platform)
 
     size = resolve_size(args.size or config_size_arg, model, platform)
+
+    # Validate resolution against per-model limits
+    _validate_size(model, size)
+
+    # Resolve output path (auto-name if not specified)
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        output_path = Path(make_output_name(platform, model))
+    create_output_dir(output_path)
 
     # Handle input image (DashScope edit models only)
     input_image = args.image
@@ -582,6 +629,11 @@ Examples:
         print(f"Endpoint: {endpoint}")
         print(f"Output: {output_path}")
         print()
+
+    if args.dry_run:
+        _out("[dim]Dry run — no API call made.[/]" if _HAS_RICH
+             else "Dry run — no API call made.")
+        return
 
     try:
         if platform == "ark":

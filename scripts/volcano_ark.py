@@ -15,6 +15,7 @@ Models:
 API endpoint: https://ark.cn-beijing.volces.com/api/v3/images/generations
 """
 
+import json
 import os
 import sys
 
@@ -109,14 +110,31 @@ def generate_with_ark(api_key, model, prompt, size, seed=None,
         sys.exit(1)
 
     if response.status_code != 200:
-        print(f"Error: Ark API returned {response.status_code}", file=sys.stderr)
-        print(f"Response: {response.text}", file=sys.stderr)
+        _format_ark_error(response)
         sys.exit(1)
 
     data = response.json()
     try:
         return data["data"][0]["url"]
     except (KeyError, IndexError, TypeError):
-        print("Error: Unexpected response format from Ark API", file=sys.stderr)
-        print(f"Response: {data}", file=sys.stderr)
+        _format_ark_error(response)
         sys.exit(1)
+
+
+def _format_ark_error(response):
+    """Print a human-readable error from an Ark API response."""
+    try:
+        err = response.json().get("error", {})
+        code = err.get("code", "")
+        msg = err.get("message", response.text)
+        if code == "ModelNotOpen":
+            print(f"Error: Model not activated. Open it in the Ark Console",
+                  file=sys.stderr)
+            print(f"  Details: {msg}", file=sys.stderr)
+        else:
+            print(f"Error: Ark API returned {response.status_code} "
+                  f"({code}): {msg}", file=sys.stderr)
+    except (json.JSONDecodeError, ValueError, AttributeError):
+        print(f"Error: Ark API returned {response.status_code}",
+              file=sys.stderr)
+        print(f"Response: {response.text}", file=sys.stderr)
