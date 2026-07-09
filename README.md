@@ -267,10 +267,6 @@ python scripts/generate_image.py --list-models
 | Singapore | `sg` | `https://dashscope-intl.aliyuncs.com/api/v1` |
 | Virginia | `us` | `https://dashscope-us.aliyuncs.com/api/v1` |
 
-## License
-
-[CC BY-NC 4.0](LICENSE) — free for non-commercial use. Commercial use requires permission.
-
 ## Support
 
 If this project helps you, consider supporting the author:
@@ -306,3 +302,7 @@ If this project helps you, consider supporting the author:
 
 - Bilibili: https://space.bilibili.com/441831884
 - GitHub: https://github.com/Agents365-ai
+
+## License
+
+[CC BY-NC 4.0](LICENSE) — free for non-commercial use. Commercial use requires permission.

@@ -265,10 +265,6 @@ python scripts/generate_image.py --list-models
 | 新加坡 | `sg` | `https://dashscope-intl.aliyuncs.com/api/v1` |
 | 弗吉尼亚 | `us` | `https://dashscope-us.aliyuncs.com/api/v1` |
 
-## 许可证
-
-[CC BY-NC 4.0](LICENSE) — 非商业用途免费。商业使用需获得授权。
-
 ## 支持
 
 如果这个项目对你有帮助，欢迎支持作者：
@@ -304,3 +300,7 @@ python scripts/generate_image.py --list-models
 
 - Bilibili: https://space.bilibili.com/441831884
 - GitHub: https://github.com/Agents365-ai
+
+## 许可证
+
+[CC BY-NC 4.0](LICENSE) — 非商业用途免费。商业使用需获得授权。
