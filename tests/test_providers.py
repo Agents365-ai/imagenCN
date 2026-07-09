@@ -1,7 +1,7 @@
 """Unit tests for imagenCN providers — exceptions, size resolution,
 generation, error formatting, backward-compatible exports.
 
-Run with: python -m pytest skills/imagenCN/tests/ -v
+Run with: python -m pytest tests/ -v
 """
 
 import os
