@@ -10,9 +10,9 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 import pytest
 
-# Allow imports from the scripts package
-_skill_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_skill_root / "scripts"))
+# Allow imports from the scripts package (repo_root/skills/imagenCN/scripts)
+_repo_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_repo_root / "skills" / "imagenCN" / "scripts"))
 
 from providers.base import (
     OpenAICompatibleProvider, ConfigError, APIError, IOError_, ImageGenError,
@@ -72,6 +72,12 @@ class TestSizeResolution:
         from stepfun import resolve_stepfun_size
         assert resolve_stepfun_size(None) == "1024x1024"
 
+    def test_gemini_named_and_ratio(self):
+        from gemini import resolve_gemini_size
+        assert resolve_gemini_size(None) == "1K"
+        assert resolve_gemini_size("2K") == "2K"
+        assert resolve_gemini_size("16:9") == "16:9"
+
 
 # ---------------------------------------------------------------------------
 # Model sets
@@ -96,6 +102,10 @@ class TestModelSets:
         from stepfun import STEPFUN_MODELS
         assert "step-2x-large" in STEPFUN_MODELS
 
+    def test_gemini_models(self):
+        from gemini import GEMINI_MODELS
+        assert "gemini-3-pro-image-preview" in GEMINI_MODELS
+
 
 # ---------------------------------------------------------------------------
 # API key handling
@@ -116,6 +126,13 @@ class TestApiKey:
             assert p.get_api_key() == "test-value-123"
         finally:
             del os.environ["TEST_KEY"]
+
+    def test_gemini_missing_key_raises_config_error(self):
+        from gemini import get_gemini_api_key
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("GEMINI_API_KEY", None)
+            with pytest.raises(ConfigError, match="GEMINI_API_KEY"):
+                get_gemini_api_key()
 
 
 # ---------------------------------------------------------------------------
@@ -162,6 +179,35 @@ class TestGeneration:
             with pytest.raises(APIError):
                 p.generate("key", "model-x", "a cat", "1024x1024")
 
+    def test_gemini_generate_returns_decoded_bytes(self):
+        import base64
+        from gemini import generate_with_gemini
+        mock_rsp = MagicMock()
+        mock_rsp.status_code = 200
+        mock_rsp.json.return_value = {"candidates": [{"content": {"parts": [
+            {"inlineData": {"data": base64.b64encode(b"png-bytes").decode()}}
+        ]}}]}
+
+        with patch("providers.base.requests") as mock_requests:
+            mock_requests.request.return_value = mock_rsp
+            out = generate_with_gemini("key", "gemini-3-pro-image-preview",
+                                       "a cat", "1K")
+            assert out == b"png-bytes"
+
+    def test_gemini_generate_no_image_raises(self):
+        from gemini import generate_with_gemini
+        mock_rsp = MagicMock()
+        mock_rsp.status_code = 200
+        mock_rsp.json.return_value = {"candidates": [{"content": {"parts": [
+            {"text": "blocked"}
+        ]}}]}
+
+        with patch("providers.base.requests") as mock_requests:
+            mock_requests.request.return_value = mock_rsp
+            with pytest.raises(APIError, match="no image data"):
+                generate_with_gemini("key", "gemini-3-pro-image-preview",
+                                     "a cat", "1K")
+
 
 # ---------------------------------------------------------------------------
 # Backward-compatible exports
@@ -203,6 +249,17 @@ class TestBackwardCompat:
         assert callable(generate_with_stepfun)
         assert isinstance(STEPFUN_MODELS, set)
         assert isinstance(STEPFUN_SIZES, dict)
+
+    def test_gemini_module_exports(self):
+        from gemini import (get_gemini_api_key, resolve_gemini_size,
+                            generate_with_gemini, save_gemini_image,
+                            GEMINI_MODELS, GEMINI_SIZES)
+        assert callable(get_gemini_api_key)
+        assert callable(resolve_gemini_size)
+        assert callable(generate_with_gemini)
+        assert callable(save_gemini_image)
+        assert isinstance(GEMINI_MODELS, set)
+        assert isinstance(GEMINI_SIZES, dict)
 
 
 # ---------------------------------------------------------------------------

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-ImagenCN — Multi-Platform Chinese T2I Image Generation Script
+ImagenCN — Multi-Platform T2I Image Generation Script
 
-Generate images using five Chinese T2I platforms:
+Generate images using five Chinese T2I platforms plus Google Gemini:
   - Alibaba Cloud Bailian (DashScope):  Qwen-Image, Wan Series, Z-Image
   - ByteDance Volcano Ark:             Doubao-Seedream series
   - Tencent Hunyuan:                   Hunyuan Image 3.0
   - Zhipu / BigModel:                  CogView-4, GLM-Image
   - StepFun / 阶跃星辰:                 Step-2X, Step-Image-Edit-2
+  - Google Gemini (international):     Gemini 3 Pro Image
 
 Usage:
     python generate_image.py "prompt" [output_path]
@@ -24,6 +25,7 @@ Environment variables:
     HUNYUAN_API_KEY (required for Hunyuan) - Tencent Hunyuan API Key
     ZHIPUAI_API_KEY (required for Zhipu) - Zhipu API Key
     STEP_API_KEY (required for StepFun) - StepFun API Key
+    GEMINI_API_KEY (required for Gemini) - Google AI Studio API Key
 
 Exit codes (stable, agent-parseable):
     0 — success
@@ -291,6 +293,19 @@ except ImportError:
     resolve_stepfun_size = None  # type: ignore[assignment]
     get_stepfun_api_key = None  # type: ignore[assignment]
 
+try:
+    from gemini import (  # noqa: E402
+        generate_with_gemini, save_gemini_image, GEMINI_MODELS, GEMINI_SIZES,
+        resolve_gemini_size, get_gemini_api_key,
+    )
+except ImportError:
+    generate_with_gemini = None  # type: ignore[assignment]
+    save_gemini_image = None  # type: ignore[assignment]
+    GEMINI_MODELS = set()
+    GEMINI_SIZES = {}
+    resolve_gemini_size = None  # type: ignore[assignment]
+    get_gemini_api_key = None  # type: ignore[assignment]
+
 
 DEFAULT_MODEL = "qwen-image-2.0-pro"
 DEFAULT_SIZE = "2048*2048"
@@ -425,6 +440,8 @@ def detect_platform(model):
         return "zhipu"
     if model in STEPFUN_MODELS:
         return "stepfun"
+    if model in GEMINI_MODELS:
+        return "gemini"
     return "dashscope"
 
 
@@ -438,6 +455,8 @@ def get_default_model_for_platform(platform):
         return os.environ.get("ZHIPUAI_MODEL", "cogview-4")
     if platform == "stepfun":
         return os.environ.get("STEP_MODEL", "step-2x-large")
+    if platform == "gemini":
+        return os.environ.get("GEMINI_MODEL", "gemini-3-pro-image-preview")
     return os.environ.get("DASHSCOPE_MODEL", DEFAULT_MODEL)
 
 
@@ -454,6 +473,8 @@ def resolve_size(size_input, model, platform=None):
         return resolve_zhipu_size(size_input)
     if platform == "stepfun" and resolve_stepfun_size is not None:
         return resolve_stepfun_size(size_input)
+    if platform == "gemini" and resolve_gemini_size is not None:
+        return resolve_gemini_size(size_input)
 
     # DashScope size resolution (unchanged)
     if model in EDIT_MODELS:
@@ -643,6 +664,10 @@ def list_models():
     for m in sorted(STEPFUN_MODELS):
         default = " (default)" if m == DEFAULT_MODEL else ""
         print(f"  - {m}{default}")
+    print("\nGoogle Gemini (international) [generateContent API]:")
+    for m in sorted(GEMINI_MODELS):
+        default = " (default)" if m == DEFAULT_MODEL else ""
+        print(f"  - {m}{default}")
     print("\nSize presets:")
     print("  Qwen-Image 2.0:", ", ".join(QWEN2_SIZES.keys()))
     print("  Z-Image:", ", ".join(ZIMAGE_SIZES.keys()))
@@ -652,6 +677,7 @@ def list_models():
     print("  Tencent Hunyuan:", ", ".join(HUNYUAN_SIZES.keys()) if HUNYUAN_SIZES else "N/A")
     print("  Zhipu:", ", ".join(ZHIPU_SIZES.keys()) if ZHIPU_SIZES else "N/A")
     print("  StepFun:", ", ".join(STEPFUN_SIZES.keys()) if STEPFUN_SIZES else "N/A")
+    print("  Google Gemini:", ", ".join(GEMINI_SIZES.keys()) if GEMINI_SIZES else "N/A")
     print("\nAPI endpoints:")
     for region, url in API_ENDPOINTS.items():
         default = " (default)" if region == "cn" else ""
@@ -660,6 +686,7 @@ def list_models():
     print(f"  - Tencent Hunyuan: https://tokenhub.tencentmaas.com/v1/images/generations")
     print(f"  - Zhipu: https://api.z.ai/api/paas/v4/images/generations")
     print(f"  - StepFun: https://api.stepfun.com/v1/images/generations")
+    print(f"  - Google Gemini: https://generativelanguage.googleapis.com/v1beta/models")
 
 
 def _validate_size(model, size):
@@ -719,7 +746,7 @@ def _validate_size(model, size):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate images via Chinese T2I platforms (DashScope/Ark/Hunyuan/Zhipu/StepFun)",
+        description="Generate images via DashScope/Ark/Hunyuan/Zhipu/StepFun/Gemini",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -744,7 +771,7 @@ Examples:
     parser.add_argument("--no-watermark", action="store_true",
                         help="Disable watermark (Volcano Ark only)")
     parser.add_argument("--platform", "-p",
-                        choices=["dashscope", "ark", "hunyuan", "zhipu", "stepfun"],
+                        choices=["dashscope", "ark", "hunyuan", "zhipu", "stepfun", "gemini"],
                         help="Target platform (auto-detect from model name by default)")
     parser.add_argument("--revise", type=int, choices=[0, 1], default=None,
                         help="Auto-enhance prompt: 0=off 1=on (Tencent Hunyuan only)")
@@ -775,7 +802,7 @@ Examples:
                     sys.exit(0)
                 all_model_ids = (SYNTHESIS_MODELS | GENERATION_MODELS | MULTIMODAL_MODELS |
                                  ZIMAGE_MODELS | EDIT_MODELS | ARK_MODELS | HUNYUAN_MODELS |
-                                 ZHIPU_MODELS | STEPFUN_MODELS)
+                                 ZHIPU_MODELS | STEPFUN_MODELS | GEMINI_MODELS)
                 if target in all_model_ids:
                     show_schema(target)
                     return
@@ -830,7 +857,7 @@ Examples:
 
     all_models = (SYNTHESIS_MODELS | GENERATION_MODELS | MULTIMODAL_MODELS |
                   ZIMAGE_MODELS | EDIT_MODELS | ARK_MODELS | HUNYUAN_MODELS |
-                  ZHIPU_MODELS | STEPFUN_MODELS)
+                  ZHIPU_MODELS | STEPFUN_MODELS | GEMINI_MODELS)
 
     # Validate model
     if model not in all_models:
@@ -847,6 +874,7 @@ Examples:
             "hunyuan": HUNYUAN_MODELS,
             "zhipu": ZHIPU_MODELS,
             "stepfun": STEPFUN_MODELS,
+            "gemini": GEMINI_MODELS,
         }.get(effective_platform)
         if platform_models and model not in platform_models:
             msg = (f"[yellow]Warning:[/] Model '{model}' is not a "
@@ -904,6 +932,9 @@ Examples:
     elif platform == "stepfun":
         api_type = "StepFun (OpenAI-compatible)"
         endpoint = "https://api.stepfun.com/v1/images/generations"
+    elif platform == "gemini":
+        api_type = "Google Gemini (generateContent)"
+        endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     elif model in SYNTHESIS_MODELS:
         api_type = "ImageSynthesis"
         endpoint = dashscope.base_http_api_url
@@ -985,6 +1016,12 @@ Examples:
             sf_key = get_stepfun_api_key()
             image_url = generate_with_stepfun(sf_key, model, args.prompt, size,
                                               negative_prompt=args.negative)
+        elif platform == "gemini":
+            if not get_gemini_api_key:
+                _emit_error(EX_AUTH, "Gemini module not available")
+            gm_key = get_gemini_api_key()
+            image_bytes = generate_with_gemini(gm_key, model, args.prompt, size,
+                                               seed=args.seed)
         elif model in SYNTHESIS_MODELS:
             api_key = get_api_key()
             rsp = generate_with_synthesis(api_key, model, args.prompt, size,
@@ -1004,7 +1041,13 @@ Examples:
     except Exception as e:
         _emit_error(EX_API, f"API call failed: {e}", retryable=True)
 
-    if platform in ("ark", "hunyuan", "zhipu", "stepfun"):
+    if platform == "gemini":
+        # Gemini returns image bytes directly (no URL to download)
+        try:
+            save_gemini_image(image_bytes, output_path)
+        except Exception as e:
+            _emit_error(EX_IO, f"Failed to save image to {output_path}: {e}")
+    elif platform in ("ark", "hunyuan", "zhipu", "stepfun"):
         # URL returned directly from generation function
         if not save_image(image_url, output_path):
             _emit_error(EX_IO, f"Failed to save image to {output_path}")
