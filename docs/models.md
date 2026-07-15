@@ -1,6 +1,6 @@
 # ImagenCN Model Reference
 
-> Data source: [`models.json`](models.json) · Updated: 2026-07-08
+> Data source: [`models.json`](models.json) · Updated: 2026-07-15
 
 ## Quick Reference
 
@@ -14,6 +14,7 @@
 | Complex Chinese composition | `hy-image-v3.0` | Hunyuan |
 | Chinese text in images | `cogview-4` | Zhipu |
 | Ultra-cheap volume gen | `step-image-edit-2` | StepFun |
+| International / Gemini | `gemini-3-pro-image-preview` | Gemini |
 
 ## Summary
 
@@ -24,6 +25,7 @@
 | **Hunyuan** | 1 | ¥0.20 | 2K | `HUNYUAN_API_KEY` |
 | **Zhipu** | 3 | ¥0.06–0.08 | 2K | `ZHIPUAI_API_KEY` |
 | **StepFun** | 2 | ¥0.02–0.10 | 1K | `STEP_API_KEY` |
+| **Gemini** | 1 | ~$0.13/img | 2K | `GEMINI_API_KEY` |
 
 ---
 
@@ -101,6 +103,16 @@ API: OpenAI-compatible REST · Endpoint: `https://api.stepfun.com/v1/images/gene
 |-------|----------|-------|---------|-------|
 | `step-2x-large` ★ | Step-2X | ¥0.10 | 1024×1024 | High quality, balanced |
 | `step-image-edit-2` | Step-Edit | ¥0.02 | 1024×1024 | Ultra-cheap, negative prompts |
+
+---
+
+## Google Gemini — 1 model
+
+API: REST (generateContent) · Endpoint: `https://generativelanguage.googleapis.com/v1beta/models`
+
+| Model | Category | Price | Max Res | Notes |
+|-------|----------|-------|---------|-------|
+| `gemini-3-pro-image-preview` ★ | Gemini | ~$0.13 | 2K | International; 512/1K/2K named sizes + aspect-ratio presets |
 
 ---
 

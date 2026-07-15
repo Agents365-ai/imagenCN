@@ -7,9 +7,11 @@
 
 [中文文档](README_CN.md)
 
-A Claude Code / OpenClaw skill for AI image generation using Alibaba Cloud Bailian, ByteDance Volcano Ark, Tencent Hunyuan, Zhipu BigModel, and StepFun APIs.
+**imagenCN — Image Generation, Cloud-Native: one CLI, every image cloud.** The project started with China-friendly clouds and now covers international providers as well.
 
-📋 **[Model Reference](https://agents365-ai.github.io/imagenCN/docs/models.html)** — browse all 30 models with pricing, resolution, and feature comparison.
+A Claude Code / OpenClaw skill for AI image generation using Alibaba Cloud Bailian, ByteDance Volcano Ark, Tencent Hunyuan, Zhipu BigModel, StepFun, and Google Gemini APIs.
+
+📋 **[Model Reference](https://agents365-ai.github.io/imagenCN/docs/models.html)** — browse all 31 models with pricing, resolution, and feature comparison.
 
 ## Pipeline
 
@@ -22,6 +24,7 @@ A Claude Code / OpenClaw skill for AI image generation using Alibaba Cloud Baili
 - **Tencent Hunyuan**: Hunyuan Image 3.0 — flagship, complex Chinese composition
 - **Zhipu / BigModel**: CogView-4, GLM-Image — 3 models, native Chinese text in images
 - **StepFun / 阶跃星辰**: Step-2X, Step-Image-Edit-2 — 2 models, ultra-cheap volume gen
+- **Google Gemini** (international): Gemini 3 Pro Image — 1 model, 512/1K/2K plus aspect ratios
 - **Multiple size presets**: 1:1, 16:9, 9:16, 4:3, 3:4, plus 1K/2K/3K/4K
 - **Cross-platform**: Windows, macOS, Linux support
 - **Multiple API regions**: China (default), Singapore, Virginia (DashScope)
@@ -88,6 +91,10 @@ export ZHIPUAI_API_KEY="your_api_key"
 # StepFun / 阶跃星辰 (optional)
 export STEP_API_KEY="your_api_key"
 # Get key: https://platform.stepfun.com/interface-key
+
+# Google Gemini (optional, international)
+export GEMINI_API_KEY="your_api_key"
+# Get key: https://aistudio.google.com/
 ```
 
 ### Config File (Optional)
@@ -109,6 +116,7 @@ export ARK_MODEL="doubao-seedream-5-0-260128"   # Volcano Ark default
 export HUNYUAN_MODEL="hy-image-v3.0"            # Tencent Hunyuan default
 export ZHIPUAI_MODEL="cogview-4"                # Zhipu default
 export STEP_MODEL="step-2x-large"               # StepFun default
+export GEMINI_MODEL="gemini-3-pro-image-preview" # Google Gemini default
 
 # Set API endpoint (DashScope only, default: cn)
 export DASHSCOPE_API_BASE="cn"  # or "sg", "us", or full URL
@@ -142,13 +150,16 @@ python scripts/generate_image.py --platform ark "Editorial portrait, Vogue style
 # Tencent Hunyuan — requires HUNYUAN_API_KEY
 python scripts/generate_image.py --platform hunyuan "Astronaut on the moon, cinematic" scifi.png
 
+# Google Gemini (international) — requires GEMINI_API_KEY
+python scripts/generate_image.py --platform gemini "Japanese garden, morning light" garden.png
+
 # Edit an existing image (DashScope, requires --image)
 python scripts/generate_image.py --model qwen-image-edit-max --image input.png "Change the background to a beach" edited.png
 
 # With negative prompt (DashScope)
 python scripts/generate_image.py --negative "blurry" "High quality portrait" portrait.png
 
-# List all 5 platforms' models
+# List all 6 platforms' models
 python scripts/generate_image.py --list-models
 ```
 
@@ -186,6 +197,7 @@ python scripts/generate_image.py --list-models
 | `glm-image` | Zhipu GLM-Image flagship, up to 2048×2048 |
 | `step-2x-large` | StepFun high quality, 0.1 RMB/image |
 | `step-image-edit-2` | StepFun ultra-cheap, 0.02 RMB/image, negative prompt support |
+| `gemini-3-pro-image-preview` | Google Gemini flagship (international), 512/1K/2K plus aspect ratios |
 
 ## Size Presets
 
@@ -252,6 +264,10 @@ python scripts/generate_image.py --list-models
 - `1:1-small` → 512x512
 - `16:9` → 1280x800
 - `9:16` → 800x1280
+
+**Google Gemini (named sizes + aspect ratios):**
+- `512` / `1K` (default) / `2K` → named output size
+- `1:1`, `16:9`, `9:16`, `4:3`, `3:4` → aspect ratio (no exact pixel sizes)
 
 ## API Endpoints
 

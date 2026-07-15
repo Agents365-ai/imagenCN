@@ -7,9 +7,11 @@
 
 [English](README.md)
 
-自然语言生成高质量图像的 Claude Code / OpenClaw 技能，支持阿里云百炼、字节火山方舟、腾讯混元、智谱 BigModel、阶跃星辰五大平台。
+**imagenCN — Image Generation, Cloud-Native：一个 CLI，接入所有图像生成云端。** 项目从中国友好的云平台起步，现已覆盖国际平台。
 
-📋 **[模型参考](https://agents365-ai.github.io/imagenCN/docs/models.html)** — 浏览全部 30 个模型，含价格、分辨率、功能对比。
+自然语言生成高质量图像的 Claude Code / OpenClaw 技能，支持阿里云百炼、字节火山方舟、腾讯混元、智谱 BigModel、阶跃星辰以及 Google Gemini 六大平台。
+
+📋 **[模型参考](https://agents365-ai.github.io/imagenCN/docs/models.html)** — 浏览全部 31 个模型，含价格、分辨率、功能对比。
 
 ## 工作流程
 
@@ -22,6 +24,7 @@
 - **腾讯混元**: 混元生图 3.0 — 旗舰模型，复杂中文语义理解
 - **智谱 / BigModel**: CogView-4、GLM-Image — 3 个模型，图片中直接渲染中文文字
 - **阶跃星辰**: Step-2X、Step-Image-Edit-2 — 2 个模型，超低价批量生成
+- **Google Gemini**（国际平台）: Gemini 3 Pro Image — 1 个模型，512/1K/2K 及比例预设
 - **多种尺寸预设**: 1:1, 16:9, 9:16, 4:3, 3:4，以及 1K/2K/3K/4K
 - **跨平台**: 支持 Windows, macOS, Linux
 - **多区域 API**: 中国（默认）、新加坡、弗吉尼亚（DashScope）
@@ -88,6 +91,10 @@ export ZHIPUAI_API_KEY="your_api_key"
 # 阶跃星辰（可选）
 export STEP_API_KEY="your_api_key"
 # 获取密钥: https://platform.stepfun.com/interface-key
+
+# Google Gemini（可选，国际平台）
+export GEMINI_API_KEY="your_api_key"
+# 获取密钥: https://aistudio.google.com/
 ```
 
 ### 配置文件（可选）
@@ -109,6 +116,7 @@ export ARK_MODEL="doubao-seedream-5-0-260128"   # 火山方舟默认
 export HUNYUAN_MODEL="hy-image-v3.0"            # 腾讯混元默认
 export ZHIPUAI_MODEL="cogview-4"                # 智谱默认
 export STEP_MODEL="step-2x-large"               # 阶跃星辰默认
+export GEMINI_MODEL="gemini-3-pro-image-preview" # Google Gemini 默认
 
 # 设置 API 端点（仅 DashScope，默认: cn）
 export DASHSCOPE_API_BASE="cn"  # 或 "sg", "us", 或完整 URL
@@ -142,13 +150,16 @@ python scripts/generate_image.py --platform ark "时尚杂志封面风格人像"
 # 腾讯混元 — 需 HUNYUAN_API_KEY
 python scripts/generate_image.py --platform hunyuan "月球上骑马的宇航员，电影级光影" scifi.png
 
+# Google Gemini（国际平台）— 需 GEMINI_API_KEY
+python scripts/generate_image.py --platform gemini "清晨柔光下的日式庭院" garden.png
+
 # 编辑已有图片（需 --image）
 python scripts/generate_image.py --model qwen-image-edit-max --image input.png "把背景换成海滩日落" edited.png
 
 # 使用负面提示词
 python scripts/generate_image.py --negative "模糊" "高质量人像" portrait.png
 
-# 列出五大平台全部模型
+# 列出六大平台全部模型
 python scripts/generate_image.py --list-models
 ```
 
@@ -186,6 +197,7 @@ python scripts/generate_image.py --list-models
 | `glm-image` | 智谱 GLM-Image 旗舰，最高 2048×2048 |
 | `step-2x-large` | 阶跃星辰 Step-2X 高品质，0.1 元/张 |
 | `step-image-edit-2` | 阶跃星辰超低价，0.02 元/张，支持负面提示词 |
+| `gemini-3-pro-image-preview` | Google Gemini 旗舰（国际平台），支持 512/1K/2K 及比例预设 |
 
 ## 尺寸预设
 
@@ -252,6 +264,10 @@ python scripts/generate_image.py --list-models
 - `1:1-small` → 512x512
 - `16:9` → 1280x800
 - `9:16` → 800x1280
+
+**Google Gemini（命名尺寸 + 宽高比）:**
+- `512` / `1K`（默认）/ `2K` → 命名输出尺寸
+- `1:1`, `16:9`, `9:16`, `4:3`, `3:4` → 宽高比（不支持精确像素尺寸）
 
 ## API 端点
 

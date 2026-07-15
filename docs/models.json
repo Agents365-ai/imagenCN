@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-08",
+  "updated": "2026-07-15",
   "providers": [
     {
       "id": "dashscope",
@@ -453,6 +453,36 @@
           "strengths": ["Cheapest", "Negative prompts", "Fast"]
         }
       ]
+    },
+    {
+      "id": "gemini",
+      "name": "Google Gemini",
+      "nameCN": "谷歌 Gemini",
+      "shortName": "Gemini",
+      "color": "#4285F4",
+      "apiStyle": "REST (generateContent)",
+      "endpoint": "https://generativelanguage.googleapis.com/v1beta/models",
+      "envVar": "GEMINI_API_KEY",
+      "regions": ["global"],
+      "getKeyUrl": "https://aistudio.google.com/",
+      "strength": "International access, strong prompt understanding",
+      "strengthCN": "国际平台，出色的提示词理解",
+      "modelCount": 1,
+      "models": [
+        {
+          "id": "gemini-3-pro-image-preview",
+          "name": "Gemini 3 Pro Image (Preview)",
+          "category": "Gemini",
+          "categoryCN": "Gemini",
+          "api": "generateContent",
+          "description": "Google flagship image model, 512/1K/2K named sizes plus aspect-ratio presets",
+          "descriptionCN": "谷歌旗舰生图模型，支持 512/1K/2K 命名尺寸与比例预设",
+          "maxResolution": "2K",
+          "pricing": "~$0.13/img",
+          "strengths": ["International", "Prompt adherence", "Photorealism"],
+          "default": true
+        }
+      ]
     }
   ],
   "quickReference": [
@@ -463,6 +493,7 @@
     { "use": "Photo + text combo", "model": "doubao-seedream-5-0-260128", "platform": "ark" },
     { "use": "Complex Chinese composition", "model": "hy-image-v3.0", "platform": "hunyuan" },
     { "use": "Chinese text in images", "model": "cogview-4", "platform": "zhipu" },
-    { "use": "Ultra-cheap volume gen", "model": "step-image-edit-2", "platform": "stepfun" }
+    { "use": "Ultra-cheap volume gen", "model": "step-image-edit-2", "platform": "stepfun" },
+    { "use": "International / Gemini", "model": "gemini-3-pro-image-preview", "platform": "gemini" }
   ]
 }
