@@ -41,14 +41,10 @@ class HunyuanProvider(OpenAICompatibleProvider):
 
     @staticmethod
     def tweak_body(body, extra):
-        args = extra.get("args")
-        if args:
-            rev = getattr(args, 'revise', None)
-            if rev is not None:
-                body["revise"] = int(rev)
-            logo = getattr(args, 'logo', None)
-            if logo is not None:
-                body["logo_add"] = int(logo)
+        if extra.get("revise") is not None:
+            body["revise"] = int(extra["revise"])
+        if extra.get("logo") is not None:
+            body["logo_add"] = int(extra["logo"])
         return body
 
 

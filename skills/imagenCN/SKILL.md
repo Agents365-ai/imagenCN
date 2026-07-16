@@ -2,9 +2,9 @@
 name: imagenCN
 description: Multi-platform AI image generation via DashScope/Ark/Hunyuan/Zhipu/StepFun plus Google Gemini (international), specializing in Chinese text rendering and photorealistic images
 author: Agents365-ai
-version: 1.1.0
+version: 1.1.1
 created: 2024-12-01
-updated: 2026-07-15
+updated: 2026-07-16
 homepage: https://github.com/Agents365-ai/imagenCN
 metadata: {"openclaw":{"requires":{"bins":["python3"],"env":["DASHSCOPE_API_KEY"]},"primaryEnv":"DASHSCOPE_API_KEY","emoji":"🎨"}}
 ---

@@ -35,14 +35,9 @@ class ArkProvider(OpenAICompatibleProvider):
 
     @staticmethod
     def tweak_body(body, extra):
-        args = extra.get("args")
-        if args:
-            if getattr(args, 'guidance_scale', None) is not None:
-                body["guidance_scale"] = args.guidance_scale
-            if getattr(args, 'no_watermark', False):
-                body["watermark"] = False
-            else:
-                body["watermark"] = True
+        if extra.get("guidance_scale") is not None:
+            body["guidance_scale"] = extra["guidance_scale"]
+        body["watermark"] = extra.get("watermark", True)
         return body
 
     @staticmethod

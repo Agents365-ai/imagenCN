@@ -29,11 +29,8 @@ class StepFunProvider(OpenAICompatibleProvider):
 
     @staticmethod
     def tweak_body(body, extra):
-        args = extra.get("args")
-        if args:
-            neg = getattr(args, 'negative', None)
-            if neg:
-                body["negative_prompt"] = neg
+        if extra.get("negative_prompt"):
+            body["negative_prompt"] = extra["negative_prompt"]
         return body
 
 

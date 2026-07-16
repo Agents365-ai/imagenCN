@@ -210,6 +210,71 @@ class TestGeneration:
 
 
 # ---------------------------------------------------------------------------
+# Request-body wiring (wrapper kwargs → tweak_body → POST body)
+# ---------------------------------------------------------------------------
+
+def _capture_body(call):
+    """Run a generate_with_* call against mocked HTTP; return the POSTed body."""
+    mock_rsp = MagicMock()
+    mock_rsp.status_code = 200
+    mock_rsp.json.return_value = {"data": [{"url": "https://cdn.example.com/i.png"}]}
+    with patch("providers.base.requests") as mock_requests:
+        mock_requests.request.return_value = mock_rsp
+        call()
+        return mock_requests.request.call_args.kwargs["json"]
+
+
+class TestBodyWiring:
+    def test_ark_guidance_and_watermark(self):
+        from volcano_ark import generate_with_ark
+        body = _capture_body(lambda: generate_with_ark(
+            "k", "doubao-seedream-5-0-260128", "a cat", "2048x2048",
+            guidance_scale=7.5, no_watermark=True))
+        assert body["guidance_scale"] == 7.5
+        assert body["watermark"] is False
+
+    def test_ark_watermark_defaults_true(self):
+        from volcano_ark import generate_with_ark
+        body = _capture_body(lambda: generate_with_ark(
+            "k", "doubao-seedream-5-0-260128", "a cat", "2048x2048"))
+        assert body["watermark"] is True
+
+    def test_hunyuan_revise_and_logo(self):
+        from hunyuan import generate_with_hunyuan
+        body = _capture_body(lambda: generate_with_hunyuan(
+            "k", "hy-image-v3.0", "a cat", "1024:1024", revise=1, logo=0))
+        assert body["revise"] == 1
+        assert body["logo_add"] == 0
+
+    def test_stepfun_negative_prompt(self):
+        from stepfun import generate_with_stepfun
+        body = _capture_body(lambda: generate_with_stepfun(
+            "k", "step-2x-large", "a cat", "1024x1024", negative="blurry"))
+        assert body["negative_prompt"] == "blurry"
+
+
+# ---------------------------------------------------------------------------
+# Dispatcher error routing (missing key → AUTH_ERROR / exit 2)
+# ---------------------------------------------------------------------------
+
+class TestDispatcherAuthError:
+    def test_missing_key_exits_2_with_auth_error(self, tmp_path):
+        import json
+        import subprocess
+        script = _repo_root / "skills" / "imagenCN" / "scripts" / "generate_image.py"
+        env = {k: v for k, v in os.environ.items() if k != "STEP_API_KEY"}
+        proc = subprocess.run(
+            [sys.executable, str(script), "a cat", str(tmp_path / "o.png"),
+             "--platform", "stepfun", "--format", "json"],
+            capture_output=True, text=True, env=env)
+        assert proc.returncode == 2, proc.stdout + proc.stderr
+        envelope = json.loads(proc.stdout)
+        assert envelope["ok"] is False
+        assert envelope["error"]["code"] == "AUTH_ERROR"
+        assert envelope["error"]["retryable"] is False
+
+
+# ---------------------------------------------------------------------------
 # Backward-compatible exports
 # ---------------------------------------------------------------------------
 

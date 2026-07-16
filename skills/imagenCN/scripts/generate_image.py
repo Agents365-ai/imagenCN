@@ -244,6 +244,8 @@ def _err(msg):
 # Ensure platform modules are importable from any working directory
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
+from providers.base import ImageGenError, APIError  # noqa: E402
+
 # Platform modules (lazy imports — SDK checked inside each generate function)
 try:
     from volcano_ark import (  # noqa: E402
@@ -1002,7 +1004,7 @@ Examples:
                 hy_key, model, args.prompt, size,
                 seed=args.seed,
                 revise=args.revise,
-                logo_add=args.logo,
+                logo=args.logo,
             )
         elif platform == "zhipu":
             if not get_zhipu_api_key:
@@ -1015,7 +1017,7 @@ Examples:
                 _emit_error(EX_AUTH, "StepFun module not available")
             sf_key = get_stepfun_api_key()
             image_url = generate_with_stepfun(sf_key, model, args.prompt, size,
-                                              negative_prompt=args.negative)
+                                              negative=args.negative)
         elif platform == "gemini":
             if not get_gemini_api_key:
                 _emit_error(EX_AUTH, "Gemini module not available")
@@ -1038,6 +1040,10 @@ Examples:
             rsp = generate_with_generation(api_key, model, args.prompt, size,
                                            args.negative,
                                            prompt_extend=not args.no_extend)
+    except ImageGenError as e:
+        # ConfigError (missing key) → exit 2 / AUTH_ERROR, not retryable;
+        # APIError → exit 3 / API_ERROR, retryable.
+        _emit_error(e.exit_code, str(e), retryable=isinstance(e, APIError))
     except Exception as e:
         _emit_error(EX_API, f"API call failed: {e}", retryable=True)
 
